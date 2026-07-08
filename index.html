@@ -110,7 +110,7 @@
           <div id="ai-content" class="ai-content-wrapper"></div>
         </div>
       </div>
-      <footer class="site-footer">Tác giả: maingoc</footer>
+      <footer class="site-footer">Tác giả: mvn</footer>
     </div>
 
     <script>
@@ -214,7 +214,7 @@
                   if (cell.className === 'giaidb') dbFullMatch = true;
                   winDetails.push(
                     `<div class="win-badge">
-                        TRÚNG ${cell.className.replace('giai', 'Giải ')}<br>
+                        TRÚNG <span class="winning-number-text">${cell.className.replace('giai', 'Giải ')}</span><br>
                         Số trúng: <span class="winning-number-text">${num}</span>
                     </div>`
                   );
