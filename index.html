@@ -166,6 +166,8 @@
     </div>
 
     <script>
+      const IS_MOBILE = window.matchMedia('(max-width: 768px)').matches;
+
       const dateInput = document.getElementById('date');
       const provinceSelect = document.getElementById('province');
       const ticketInput = document.getElementById('ticket-number');
@@ -639,7 +641,9 @@
       let confettiTimeouts = [];
 
       function spawnConfettiBurst(x, y) {
-        const circleCount = Math.floor(Math.random() * 30) + 50;
+        const circleCount = IS_MOBILE
+          ? Math.floor(Math.random() * 12) + 20
+          : Math.floor(Math.random() * 30) + 50;
         for (let i = 0; i < circleCount; i++) {
           const angle = Math.random() * 2 * Math.PI;
           const velocity = Math.random() * 6 + 2;
@@ -674,8 +678,8 @@
 
         const width = supernovaCanvas.width;
         const height = supernovaCanvas.height;
-        const burstCount = 16;
-        const burstInterval = 220;
+        const burstCount = IS_MOBILE ? 6 : 16;
+        const burstInterval = IS_MOBILE ? 280 : 220;
 
         supernovaCanvas.style.opacity = '1';
 
@@ -735,7 +739,7 @@
       })();
 
       (function initRainDrops() {
-        const totalDrops = 400;
+        const totalDrops = IS_MOBILE ? 150 : 400;
         const layerDurations = { back: 2, mid: 1.2, front: 0.7 };
 
         for (let i = 0; i < totalDrops; i++) {
