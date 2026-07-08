@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DÒ VÉ TỰ ĐỘNG</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://cdn-icons-png.flaticon.com/512/9642/9642882.png"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="title-box">
+        <div class="gif-lottery-container">
+          <img
+            src="https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExajcyNTA2aDZ0MmJ3YTIyNHF5em1wb2Nwcm1zc2s3ZmNkOHgzN3RnZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/1jARfPtdz7eE0/giphy.gif"
+            alt="Loser"
+            style="width: 100%; display: block"
+            class="gif-lottery"
+          />
+        </div>
+        <h1 class="pixel-title">DÒ VÉ TỰ ĐỘNG</h1>
+      </div>
+      <div class="form-group pixel-border">
+        <label>Chọn Đài:</label>
+        <select id="province">
+          <optgroup label="Xổ Số Miền Nam">
+            <option value="ben-tre">Bến Tre</option>
+            <option value="dong-nai">Đồng Nai</option>
+            <option value="can-tho">Cần Thơ</option>
+            <option value="soc-trang">Sóc Trăng</option>
+          </optgroup>
+
+          <optgroup label="Xổ Số Miền Bắc">
+            <option value="mien-bac">Miền Bắc (Hà Nội)</option>
+            <option value="bac-ninh">Bắc Ninh</option>
+          </optgroup>
+
+          <optgroup label="Xổ Số Miền Trung">
+            <option value="da-nang">Đà Nẵng</option>
+            <option value="khanh-hoa">Khánh Hòa</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="form-group pixel-border">
+        <label>Ngày mở thưởng:</label>
+        <input type="date" id="date" />
+      </div>
+      <div class="form-group pixel-border">
+        <label>Dãy số trên vé (5 hoặc 6 chữ số):</label>
+        <input
+          type="text"
+          id="ticket-number"
+          placeholder="Ví dụ: 123456"
+          maxlength="6"
+        />
+      </div>
+
+      <button class="btn pixel-border" onclick="startProcess()">
+        DÒ VÉ !!!
+      </button>
+      <div id="status-message"></div>
+
+      <div id="result-box">
+        <div class="result-title-box">
+          <img
+            src="https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeHA0OWxlM3k2dXpxYWwyMDFybG5vMnV3d2MyaWw0dThpdXVrNmo0ciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/DH1Au7j1gCGxGOkvUm/giphy.gif"
+            alt=""
+            class="cat-dance-gif"
+            style="transform: scaleX(-1)"
+          />
+          <h3 id="result-title" class="pixel-border"></h3>
+          <img
+            src="https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeHA0OWxlM3k2dXpxYWwyMDFybG5vMnV3d2MyaWw0dThpdXVrNmo0ciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/DH1Au7j1gCGxGOkvUm/giphy.gif"
+            alt=""
+            class="cat-dance-gif"
+          />
+        </div>
+
+        <div id="result-details"></div>
+        <div class="container-loader-bar">
+          <div class="loader-bar" id="loading-bar">
+            <div class="block-border"></div>
+            <div class="block-border"></div>
+            <div class="block-border"></div>
+            <div class="block-border"></div>
+            <div class="block-border"></div>
+            <div class="block-border"></div>
+            <div class="block-border"></div>
+            <div class="block-border"></div>
+            <div class="block-meter"></div>
+            <div class="block-meter"></div>
+            <div class="block-meter"></div>
+            <div class="block-meter"></div>
+            <div class="block-meter"></div>
+            <div class="block-meter"></div>
+            <div class="block-meter"></div>
+            <div class="block-meter"></div>
+          </div>
+        </div>
+        <div class="ai-analysis" id="ai-section" style="display: none">
+          <div id="ai-content" class="ai-content-wrapper"></div>
+        </div>
+      </div>
+      <footer class="site-footer">Tác giả: maingoc</footer>
+    </div>
+
+    <script>
+      document.getElementById('date').valueAsDate = new Date();
+      const statusMsg = document.getElementById('status-message');
+
+      async function startProcess() {
+        const province = document.getElementById('province').value;
+        const userNumber = document
+          .getElementById('ticket-number')
+          .value.trim();
+        const selectedDate = document.getElementById('date').value;
+
+        if (!userNumber || userNumber.length < 5)
+          return alert('Vui lòng nhập số hợp lệ!');
+
+        const [year, month, day] = selectedDate.split('-');
+        const formattedDate = `${day}-${month}-${year}`;
+
+        statusMsg.innerHTML = 'Đang truy xuất dữ liệu...';
+        document.getElementById('result-box').style.display = 'none';
+        document.getElementById('ai-section').style.display = 'none';
+
+        const loaderBar = document.getElementById('loading-bar');
+        loaderBar.style.display = 'grid';
+
+        try {
+          const response = await fetch(
+            `http://localhost:3000/api/kqxs?date=${formattedDate}&province=${province}`
+          );
+          const htmlText = await response.text();
+          const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+          const boxKqxs = doc.querySelector('.box_kqxs');
+
+          if (!boxKqxs) {
+            loaderBar.style.display = 'none';
+            return (statusMsg.innerHTML = '❌ Không có dữ liệu ngày này.');
+          }
+
+          const matchResult = executeMatchLogic(userNumber, boxKqxs);
+
+          statusMsg.innerHTML =
+            'Đã có kết quả!!!. Đang phân tích ý nghĩa dãy số của bạn cho dzui....';
+
+          const aiResponse = await fetch(
+            `http://localhost:3000/api/phan-tich-ai`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userNumber,
+                isWinning: matchResult.isWin,
+                details: matchResult.details
+              })
+            }
+          );
+          const aiData = await aiResponse.json();
+
+          if (aiData.aiText && aiData.aiText.trim() !== '') {
+            document.getElementById('ai-content').innerHTML = aiData.aiText;
+            document.getElementById('ai-section').style.display = 'block';
+          } else {
+            console.warn('AI không trả về nội dung.');
+          }
+
+          loaderBar.style.display = 'none';
+          statusMsg.innerHTML = '';
+        } catch (err) {
+          console.error(err);
+          statusMsg.innerHTML = '❌ Lỗi hệ thống.';
+          document.getElementById('loading-bar').style.display = 'none';
+        }
+      }
+
+      function executeMatchLogic(userNumber, htmlElement) {
+        let winDetails = [],
+          isWinning = false,
+          dbNumber = null,
+          dbFullMatch = false;
+
+        htmlElement.querySelectorAll('td').forEach(cell => {
+          if (cell.className.includes('giai')) {
+            if (cell.className === 'giaidb') {
+              dbNumber = cell.innerText.replace(/\s+/g, '');
+            }
+            cell.innerText
+              .replace(/\s+/g, '')
+              .split('-')
+              .forEach(num => {
+                if (num.match(/^\d+$/) && userNumber.endsWith(num)) {
+                  isWinning = true;
+                  if (cell.className === 'giaidb') dbFullMatch = true;
+                  winDetails.push(
+                    `<div class="win-badge">
+                        TRÚNG ${cell.className.replace('giai', 'Giải ')}<br>
+                        Số trúng: <span class="winning-number-text">${num}</span>
+                    </div>`
+                  );
+                }
+              });
+          }
+        });
+
+        // Giải khuyến khích riêng của đại lý: trùng 4/3/2 số cuối Giải Đặc Biệt
+        if (!dbFullMatch && dbNumber) {
+          for (const len of [4, 3, 2]) {
+            if (userNumber.length < len) continue;
+            const userSuffix = userNumber.slice(-len);
+            const dbSuffix = dbNumber.slice(-len);
+            if (userSuffix === dbSuffix) {
+              isWinning = true;
+              winDetails.push(
+                `<div class="agency-badge">
+                    GIẢI KHUYẾN KHÍCH ĐẠI LÝ (2 VÉ THƯỞNG) - ÁP DỤNG NẾU BẠN MUA TỪ ĐẠI LÝ VÉ SỐ<br>
+                    Trùng ${len} số cuối Giải Đặc Biệt: <span class="winning-number-text">${userSuffix}</span>
+                </div>`
+              );
+              break;
+            }
+          }
+        }
+
+        const resultBox = document.getElementById('result-box'),
+          resultTitle = document.getElementById('result-title'),
+          resultDetails = document.getElementById('result-details');
+
+        const catGifs = document.querySelectorAll('.cat-dance-gif');
+        const WIN_GIF =
+          'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeHA0OWxlM3k2dXpxYWwyMDFybG5vMnV3d2MyaWw0dThpdXVrNmo0ciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/DH1Au7j1gCGxGOkvUm/giphy.gif';
+        const LOSE_GIF =
+          'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmU3dTR2YXY1Zm8zdnBtMGdnY3h2Z2EwMWl0eTZjdDNrYjV3d3V5cCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/a6TvNMFAJqfTOAGjz4/giphy.gif';
+
+        resultBox.style.display = 'block';
+
+        if (isWinning) {
+          catGifs.forEach(img => (img.src = WIN_GIF));
+          resultTitle.innerHTML = 'XÁC NHẬN TRÚNG THƯỞNG';
+          resultTitle.className = 'neon-text';
+          resultDetails.style.textAlign = 'center';
+          resultDetails.innerHTML = winDetails
+            .map(item => `<div>${item}</div>`)
+            .join('');
+          confetti();
+        } else {
+          catGifs.forEach(img => (img.src = LOSE_GIF));
+          resultTitle.innerHTML = 'KẾT QUẢ: KHÔNG TRÚNG THƯỞNG';
+          resultTitle.className = 'neon-text-failed';
+          resultDetails.innerHTML = '';
+        }
+        return { isWin: isWinning, details: winDetails.join(', ') };
+      }
+    </script>
+  </body>
+</html>
