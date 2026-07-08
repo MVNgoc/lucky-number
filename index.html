@@ -29,44 +29,46 @@
         </div>
         <h1 class="pixel-title">DÒ VÉ TỰ ĐỘNG</h1>
       </div>
-      <div class="form-group pixel-border">
-        <label>Chọn Đài:</label>
-        <select id="province">
-          <optgroup label="Xổ Số Miền Nam">
-            <option value="ben-tre">Bến Tre</option>
-            <option value="dong-nai">Đồng Nai</option>
-            <option value="can-tho">Cần Thơ</option>
-            <option value="soc-trang">Sóc Trăng</option>
-          </optgroup>
+      <div class="ticket-form">
+        <div class="form-group pixel-border">
+          <label>Chọn Đài:</label>
+          <select id="province">
+            <optgroup label="Xổ Số Miền Nam">
+              <option value="ben-tre">Bến Tre</option>
+              <option value="dong-nai">Đồng Nai</option>
+              <option value="can-tho">Cần Thơ</option>
+              <option value="soc-trang">Sóc Trăng</option>
+            </optgroup>
 
-          <optgroup label="Xổ Số Miền Bắc">
-            <option value="mien-bac">Miền Bắc (Hà Nội)</option>
-            <option value="bac-ninh">Bắc Ninh</option>
-          </optgroup>
+            <optgroup label="Xổ Số Miền Bắc">
+              <option value="mien-bac">Miền Bắc (Hà Nội)</option>
+              <option value="bac-ninh">Bắc Ninh</option>
+            </optgroup>
 
-          <optgroup label="Xổ Số Miền Trung">
-            <option value="da-nang">Đà Nẵng</option>
-            <option value="khanh-hoa">Khánh Hòa</option>
-          </optgroup>
-        </select>
-      </div>
-      <div class="form-group pixel-border">
-        <label>Ngày mở thưởng:</label>
-        <input type="date" id="date" />
-      </div>
-      <div class="form-group pixel-border">
-        <label>Dãy số trên vé (5 hoặc 6 chữ số):</label>
-        <input
-          type="text"
-          id="ticket-number"
-          placeholder="Ví dụ: 123456"
-          maxlength="6"
-        />
-      </div>
+            <optgroup label="Xổ Số Miền Trung">
+              <option value="da-nang">Đà Nẵng</option>
+              <option value="khanh-hoa">Khánh Hòa</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="form-group pixel-border">
+          <label>Ngày mở thưởng:</label>
+          <input type="date" id="date" />
+        </div>
+        <div class="form-group pixel-border">
+          <label>Dãy số trên vé (5 hoặc 6 chữ số):</label>
+          <input
+            type="text"
+            id="ticket-number"
+            placeholder="Ví dụ: 123456"
+            maxlength="6"
+          />
+        </div>
 
-      <button class="btn pixel-border" onclick="startProcess()">
-        DÒ VÉ !!!
-      </button>
+        <button class="btn pixel-border" onclick="startProcess()">
+          DÒ VÉ !!!
+        </button>
+      </div>
       <div id="status-message"></div>
 
       <div id="result-box">
