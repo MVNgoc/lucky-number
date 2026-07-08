@@ -10,7 +10,11 @@
       href="https://cdn-icons-png.flaticon.com/512/9642/9642882.png"
     />
     <link rel="stylesheet" href="style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"
+      integrity="sha384-hbhUBXITXDJbdxAutkRZOGlStNARd6f3N2y0fDfrBwMhXEaeaCrpNu7g24F/vYDq"
+      crossorigin="anonymous"
+    ></script>
   </head>
   <body>
     <div class="container">
@@ -18,7 +22,7 @@
         <div class="gif-lottery-container">
           <img
             src="https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExajcyNTA2aDZ0MmJ3YTIyNHF5em1wb2Nwcm1zc2s3ZmNkOHgzN3RnZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/1jARfPtdz7eE0/giphy.gif"
-            alt="Loser"
+            alt="Ảnh minh họa vé số"
             style="width: 100%; display: block"
             class="gif-lottery"
           />
@@ -69,14 +73,14 @@
         <div class="result-title-box">
           <img
             src="https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeHA0OWxlM3k2dXpxYWwyMDFybG5vMnV3d2MyaWw0dThpdXVrNmo0ciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/DH1Au7j1gCGxGOkvUm/giphy.gif"
-            alt=""
+            alt="Ảnh động kết quả"
             class="cat-dance-gif"
             style="transform: scaleX(-1)"
           />
           <h3 id="result-title" class="pixel-border"></h3>
           <img
             src="https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeHA0OWxlM3k2dXpxYWwyMDFybG5vMnV3d2MyaWw0dThpdXVrNmo0ciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/DH1Au7j1gCGxGOkvUm/giphy.gif"
-            alt=""
+            alt="Ảnh động kết quả"
             class="cat-dance-gif"
           />
         </div>
@@ -110,32 +114,42 @@
     </div>
 
     <script>
-      document.getElementById('date').valueAsDate = new Date();
+      const dateInput = document.getElementById('date');
+      const provinceSelect = document.getElementById('province');
+      const ticketInput = document.getElementById('ticket-number');
+      const submitBtn = document.querySelector('.btn');
       const statusMsg = document.getElementById('status-message');
+      const resultBox = document.getElementById('result-box');
+      const aiSection = document.getElementById('ai-section');
+      const aiContent = document.getElementById('ai-content');
+      const loaderBar = document.getElementById('loading-bar');
+      const resultTitle = document.getElementById('result-title');
+      const resultDetails = document.getElementById('result-details');
+
+      dateInput.valueAsDate = new Date();
+
+      const TICKET_NUMBER_REGEX = /^\d{5,6}$/;
 
       async function startProcess() {
-        const province = document.getElementById('province').value;
-        const userNumber = document
-          .getElementById('ticket-number')
-          .value.trim();
-        const selectedDate = document.getElementById('date').value;
+        const province = provinceSelect.value;
+        const userNumber = ticketInput.value.trim();
+        const selectedDate = dateInput.value;
 
-        if (!userNumber || userNumber.length < 5)
-          return alert('Vui lòng nhập số hợp lệ!');
+        if (!TICKET_NUMBER_REGEX.test(userNumber))
+          return alert('Vui lòng nhập dãy số hợp lệ (5 hoặc 6 chữ số)!');
 
         const [year, month, day] = selectedDate.split('-');
         const formattedDate = `${day}-${month}-${year}`;
 
+        submitBtn.disabled = true;
         statusMsg.innerHTML = 'Đang truy xuất dữ liệu...';
-        document.getElementById('result-box').style.display = 'none';
-        document.getElementById('ai-section').style.display = 'none';
-
-        const loaderBar = document.getElementById('loading-bar');
+        resultBox.style.display = 'none';
+        aiSection.style.display = 'none';
         loaderBar.style.display = 'grid';
 
         try {
           const response = await fetch(
-            `http://localhost:3000/api/kqxs?date=${formattedDate}&province=${province}`
+            `/api/kqxs?date=${formattedDate}&province=${province}`
           );
           const htmlText = await response.text();
           const doc = new DOMParser().parseFromString(htmlText, 'text/html');
@@ -151,23 +165,20 @@
           statusMsg.innerHTML =
             'Đã có kết quả!!!. Đang phân tích ý nghĩa dãy số của bạn cho dzui....';
 
-          const aiResponse = await fetch(
-            `http://localhost:3000/api/phan-tich-ai`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userNumber,
-                isWinning: matchResult.isWin,
-                details: matchResult.details
-              })
-            }
-          );
+          const aiResponse = await fetch(`/api/phan-tich-ai`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userNumber,
+              isWinning: matchResult.isWin,
+              details: matchResult.details
+            })
+          });
           const aiData = await aiResponse.json();
 
           if (aiData.aiText && aiData.aiText.trim() !== '') {
-            document.getElementById('ai-content').innerHTML = aiData.aiText;
-            document.getElementById('ai-section').style.display = 'block';
+            aiContent.innerHTML = aiData.aiText;
+            aiSection.style.display = 'block';
           } else {
             console.warn('AI không trả về nội dung.');
           }
@@ -177,7 +188,9 @@
         } catch (err) {
           console.error(err);
           statusMsg.innerHTML = '❌ Lỗi hệ thống.';
-          document.getElementById('loading-bar').style.display = 'none';
+          loaderBar.style.display = 'none';
+        } finally {
+          submitBtn.disabled = false;
         }
       }
 
@@ -228,10 +241,6 @@
             }
           }
         }
-
-        const resultBox = document.getElementById('result-box'),
-          resultTitle = document.getElementById('result-title'),
-          resultDetails = document.getElementById('result-details');
 
         const catGifs = document.querySelectorAll('.cat-dance-gif');
         const WIN_GIF =

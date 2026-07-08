@@ -1,0 +1,13 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/kqxs"
+  to = "/.netlify/functions/kqxs"
+  status = 200
+
+[[redirects]]
+  from = "/api/phan-tich-ai"
+  to = "/.netlify/functions/phan-tich-ai"
+  status = 200
