@@ -17,7 +17,12 @@
     ></script>
   </head>
   <body>
-    <audio id="bg-music" src="audios/lottery_tickets_audio.mp3" loop preload="auto"></audio>
+    <audio
+      id="bg-music"
+      src="audios/lottery_tickets_audio.mp3"
+      loop
+      preload="auto"
+    ></audio>
     <audio id="win-audio" src="audios/winning.mp3" preload="auto"></audio>
     <audio id="lose-audio" src="audios/losing.mp3" preload="auto"></audio>
     <button
@@ -84,19 +89,11 @@
             />
             <div class="date-picker-popup" id="date-picker-popup">
               <div class="date-picker-header">
-                <button
-                  type="button"
-                  class="date-nav-btn"
-                  id="date-prev-month"
-                >
+                <button type="button" class="date-nav-btn" id="date-prev-month">
                   &#9664;
                 </button>
                 <span id="date-picker-label"></span>
-                <button
-                  type="button"
-                  class="date-nav-btn"
-                  id="date-next-month"
-                >
+                <button type="button" class="date-nav-btn" id="date-next-month">
                   &#9654;
                 </button>
               </div>
@@ -180,7 +177,9 @@
       const loaderBar = document.getElementById('loading-bar');
       const resultTitle = document.getElementById('result-title');
       const resultDetails = document.getElementById('result-details');
-      const loaderBlocks = Array.from(document.querySelectorAll('.block-meter'));
+      const loaderBlocks = Array.from(
+        document.querySelectorAll('.block-meter')
+      );
       const supernovaCanvas = document.getElementById('supernova-canvas');
       const supernovaCtx = supernovaCanvas.getContext('2d');
       const rainOverlay = document.getElementById('rain-overlay');
@@ -235,7 +234,9 @@
               console.warn('Không thể tua lại audio:', err);
             }
           }
-          audioEl.play().catch(err => console.warn('Không thể phát audio:', err));
+          audioEl
+            .play()
+            .catch(err => console.warn('Không thể phát audio:', err));
         }
 
         function onEnded() {
@@ -260,9 +261,18 @@
       const dateNextMonthBtn = document.getElementById('date-next-month');
 
       const MONTH_NAMES_VI = [
-        'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4',
-        'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8',
-        'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12',
+        'Tháng 1',
+        'Tháng 2',
+        'Tháng 3',
+        'Tháng 4',
+        'Tháng 5',
+        'Tháng 6',
+        'Tháng 7',
+        'Tháng 8',
+        'Tháng 9',
+        'Tháng 10',
+        'Tháng 11',
+        'Tháng 12'
       ];
 
       const today = new Date();
@@ -485,6 +495,16 @@
         }
       }
 
+      function getCellNumbers(cell) {
+        const divs = cell.querySelectorAll('div');
+        if (divs.length > 0) {
+          return Array.from(divs).map(div =>
+            div.textContent.replace(/\s+/g, '')
+          );
+        }
+        return cell.textContent.replace(/\s+/g, '').split('-').filter(Boolean);
+      }
+
       function executeMatchLogic(userNumber, htmlElement) {
         let winDetails = [],
           isWinning = false,
@@ -493,24 +513,25 @@
 
         htmlElement.querySelectorAll('td').forEach(cell => {
           if (cell.className.includes('giai')) {
+            const numbers = getCellNumbers(cell);
             if (cell.className === 'giaidb') {
-              dbNumber = cell.innerText.replace(/\s+/g, '');
+              dbNumber = numbers[0] || '';
             }
-            cell.innerText
-              .replace(/\s+/g, '')
-              .split('-')
-              .forEach(num => {
-                if (num.match(/^\d+$/) && userNumber.endsWith(num)) {
-                  isWinning = true;
-                  if (cell.className === 'giaidb') dbFullMatch = true;
-                  winDetails.push(
-                    `<div class="win-badge">
-                        TRÚNG <span class="winning-number-text">${cell.className.replace('giai', 'Giải ')}</span><br>
-                        Số trúng: <span class="winning-number-text">${num}</span>
+            numbers.forEach(num => {
+              if (num.match(/^\d+$/) && userNumber.endsWith(num)) {
+                isWinning = true;
+                const isDacBiet = cell.className === 'giaidb';
+                if (isDacBiet) dbFullMatch = true;
+                const topLabel = isDacBiet ? 'Á ĐẦU TRÚNG' : 'TRÚNG';
+                const numLabel = isDacBiet ? 'Số trúng' : 'Số đuôi trúng';
+                winDetails.push(
+                  `<div class="win-badge">
+                        ${topLabel} <span class="winning-number-text">${cell.className.replace('giai', 'Giải ')}</span><br>
+                        ${numLabel}: <span class="winning-number-text">${num}</span>
                     </div>`
-                  );
-                }
-              });
+                );
+              }
+            });
           }
         });
 
@@ -524,8 +545,9 @@
               isWinning = true;
               winDetails.push(
                 `<div class="agency-badge">
-                    GIẢI KHUYẾN KHÍCH ĐẠI LÝ (2 VÉ THƯỞNG) - ÁP DỤNG NẾU BẠN MUA TỪ ĐẠI LÝ VÉ SỐ<br>
-                    Trùng ${len} số cuối Giải Đặc Biệt: <span class="winning-number-text">${userSuffix}</span>
+                    GIẢI KHUYẾN KHÍCH ĐẠI LÝ - ÁP DỤNG NẾU BẠN MUA TỪ ĐẠI LÝ VÉ SỐ<br>
+                    Trùng ${len} số cuối Giải Đặc Biệt: <span class="winning-number-text">${userSuffix}</span><br>
+                    Số Giải Đặc Biệt: <span class="winning-number-text">${dbNumber}</span>
                 </div>`
               );
               break;
@@ -580,7 +602,7 @@
           next() {
             index = index < colors.length - 1 ? index + 1 : 0;
             return colors[index];
-          },
+          }
         };
       })();
 
@@ -629,8 +651,8 @@
               c: confettiColorPicker.next(),
               v: {
                 x: Math.cos(angle) * velocity,
-                y: Math.sin(angle) * velocity,
-              },
+                y: Math.sin(angle) * velocity
+              }
             })
           );
         }
@@ -659,12 +681,15 @@
 
         const burstPositions = Array.from({ length: burstCount }, () => ({
           x: width * (0.1 + Math.random() * 0.8),
-          y: height * (0.1 + Math.random() * 0.8),
+          y: height * (0.1 + Math.random() * 0.8)
         }));
 
         burstPositions.forEach((pos, i) => {
           confettiTimeouts.push(
-            setTimeout(() => spawnConfettiBurst(pos.x, pos.y), i * burstInterval)
+            setTimeout(
+              () => spawnConfettiBurst(pos.x, pos.y),
+              i * burstInterval
+            )
           );
         });
 

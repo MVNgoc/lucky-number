@@ -340,7 +340,8 @@ select {
   background-position: right 14px center;
   background-size: 16px 16px;
 }
-input:focus-visible {
+input:focus-visible,
+#province:focus-visible {
   outline: none;
 }
 .date-field {
