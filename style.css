@@ -4,10 +4,16 @@
   --pixel-border: 4px solid #000;
   --accent-color: #00ff00;
 }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 body {
   font-family: 'Courier New', Courier, monospace;
   background-color: var(--bg-color);
   image-rendering: pixelated;
+  overflow-x: hidden;
 }
 .container {
   border: var(--pixel-border);
@@ -29,6 +35,7 @@ h1 {
   text-align: center;
   color: var(--primary-color);
   margin-bottom: 20px;
+  font-size: 1.8em;
 }
 .ticket-form {
   max-width: 520px;
@@ -179,6 +186,10 @@ input:focus-visible {
 }
 .block-meter {
   background-color: rgb(100, 200, 100);
+  opacity: 0;
+}
+.block-meter.filled {
+  animation: block-pop 0.2s steps(1) forwards;
 }
 
 .block-border:nth-of-type(1) {
@@ -238,29 +249,21 @@ input:focus-visible {
 .block-meter:nth-of-type(13) {
   grid-row: 3/5;
   grid-column: 12;
-  opacity: 0;
-  animation: blinky1 2s linear forwards;
 }
 
 .block-meter:nth-of-type(14) {
   grid-row: 3/5;
   grid-column: 14;
-  opacity: 0;
-  animation: blinky1 2s 4s linear forwards;
 }
 
 .block-meter:nth-of-type(15) {
   grid-row: 3/5;
   grid-column: 16;
-  opacity: 0;
-  animation: blinky1 2s 8s linear forwards;
 }
 
 .block-meter:nth-of-type(16) {
   grid-row: 3/5;
   grid-column: 18;
-  opacity: 0;
-  animation: blinky2 3s 14s linear infinite;
 }
 
 .container-loader-bar {
@@ -269,22 +272,13 @@ input:focus-visible {
   align-items: center;
 }
 
-@keyframes blinky1 {
-  99% {
+/* JS thêm class "filled" cho từng khối theo tiến trình gọi API thực tế
+   (không dùng animation-delay cố định vì thời gian phản hồi của AI thay đổi) */
+@keyframes block-pop {
+  from {
     opacity: 0;
   }
-  100% {
-    opacity: 1;
-  }
-}
-@keyframes blinky2 {
-  49% {
-    opacity: 0;
-  }
-  50% {
-    opacity: 1;
-  }
-  90% {
+  to {
     opacity: 1;
   }
 }
@@ -358,7 +352,10 @@ input:focus-visible {
 
 .result-title-box {
   display: flex;
-  justify-content: space-around;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
 }
 
 .winning-number-text {
@@ -402,4 +399,163 @@ input:focus-visible {
 
 .cat-dance-gif {
   max-width: 100px;
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+  .container {
+    max-width: 92vw;
+    margin: 30px auto;
+    padding: 16px;
+  }
+  h1,
+  .pixel-title {
+    font-size: 1.4em;
+  }
+  .gif-lottery {
+    max-width: 320px;
+  }
+  label {
+    font-size: 1em;
+  }
+  select,
+  input {
+    font-size: 1.05em;
+    padding: 10px;
+  }
+  .btn {
+    font-size: 1.2em;
+    padding: 14px;
+    letter-spacing: 1px;
+  }
+  .neon-text,
+  .neon-text-failed {
+    font-size: 1.5em !important;
+    padding: 8px 14px;
+  }
+  .win-badge {
+    font-size: 1.2em;
+    padding: 14px;
+  }
+  .agency-badge {
+    font-size: 1em;
+    padding: 14px;
+  }
+  .winning-number-text {
+    font-size: 0.85em;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  body {
+    font-size: 14px;
+  }
+  .container {
+    max-width: 100vw;
+    margin: 0 auto;
+    padding: 10px;
+    border-width: 3px;
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2);
+  }
+  h1,
+  .pixel-title {
+    font-size: 1.1em;
+    margin-bottom: 12px;
+  }
+  .gif-lottery {
+    max-width: 220px;
+  }
+  .form-group {
+    margin-bottom: 14px;
+  }
+  label {
+    font-size: 0.9em;
+    margin-bottom: 6px;
+  }
+  select,
+  input {
+    font-size: 0.95em;
+    padding: 9px;
+  }
+  .btn {
+    font-size: 1em;
+    padding: 12px;
+    letter-spacing: 1px;
+    box-shadow: 3px 3px 0px #000;
+  }
+  #status-message {
+    margin-top: 20px;
+    font-size: 0.9em;
+  }
+  #result-box {
+    padding: 12px;
+  }
+  .neon-text,
+  .neon-text-failed {
+    font-size: 1em !important;
+    padding: 6px 10px;
+    border-width: 3px;
+    -webkit-text-stroke: 1px #000;
+  }
+  .win-badge {
+    font-size: 0.9em;
+    padding: 10px;
+    box-shadow: 4px 4px 0px #28a745;
+  }
+  .agency-badge {
+    font-size: 0.8em;
+    padding: 10px;
+    box-shadow: 4px 4px 0px #ff8c00;
+  }
+  .winning-number-text {
+    font-size: 0.85em;
+  }
+  .cat-dance-gif {
+    max-width: 50px;
+  }
+  .loader-bar {
+    transform: scale(0.6);
+    transform-origin: center;
+    margin: 12px 0;
+  }
+}
+
+/* Extra-small phones */
+@media (max-width: 360px) {
+  .container {
+    padding: 8px;
+  }
+  h1,
+  .pixel-title {
+    font-size: 0.95em;
+  }
+  .gif-lottery {
+    max-width: 180px;
+  }
+  select,
+  input {
+    font-size: 0.85em;
+    padding: 8px;
+  }
+  .btn {
+    font-size: 0.9em;
+    padding: 10px;
+  }
+  .neon-text,
+  .neon-text-failed {
+    font-size: 0.85em !important;
+  }
+  .win-badge {
+    font-size: 0.8em;
+  }
+  .agency-badge {
+    font-size: 0.72em;
+  }
+  .cat-dance-gif {
+    max-width: 40px;
+  }
+  .loader-bar {
+    transform: scale(0.5);
+  }
 }

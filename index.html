@@ -127,10 +127,43 @@
       const loaderBar = document.getElementById('loading-bar');
       const resultTitle = document.getElementById('result-title');
       const resultDetails = document.getElementById('result-details');
+      const loaderBlocks = Array.from(document.querySelectorAll('.block-meter'));
 
       dateInput.valueAsDate = new Date();
 
       const TICKET_NUMBER_REGEX = /^\d{5,6}$/;
+
+      let loaderTickTimer = null;
+
+      function resetLoaderBlocks() {
+        clearInterval(loaderTickTimer);
+        loaderBlocks.forEach(block => block.classList.remove('filled'));
+      }
+
+      function fillLoaderBlocksUpTo(count) {
+        loaderBlocks.forEach((block, i) => {
+          if (i < count) block.classList.add('filled');
+        });
+      }
+
+      // Tăng khối từ from đến to (không bao gồm to) từ từ; khi đầy đoạn này
+      // thì reset và tăng lại từ đầu, lặp liên tục cho tới khi có phản hồi
+      // thật từ server/AI (thay vì chạy hết rồi đứng im chờ như trước, khiến
+      // thanh loading trông như bị đứng khi request lâu hơn dự kiến).
+      function animateLoaderBlocks(from, to, intervalMs) {
+        clearInterval(loaderTickTimer);
+        let i = from;
+        loaderTickTimer = setInterval(() => {
+          if (i >= to) {
+            for (let j = from; j < to; j++)
+              loaderBlocks[j].classList.remove('filled');
+            i = from;
+            return;
+          }
+          loaderBlocks[i].classList.add('filled');
+          i++;
+        }, intervalMs);
+      }
 
       async function startProcess() {
         const province = provinceSelect.value;
@@ -148,6 +181,11 @@
         resultBox.style.display = 'none';
         aiSection.style.display = 'none';
         loaderBar.style.display = 'grid';
+        resetLoaderBlocks();
+
+        const halfBlocks = Math.floor(loaderBlocks.length / 2);
+        // Nửa đầu tăng dần trong lúc chờ KQXS, dừng lại nếu server chưa phản hồi kịp
+        animateLoaderBlocks(0, halfBlocks, 300);
 
         try {
           const response = await fetch(
@@ -157,7 +195,11 @@
           const doc = new DOMParser().parseFromString(htmlText, 'text/html');
           const boxKqxs = doc.querySelector('.box_kqxs');
 
+          // KQXS đã có -> chốt nửa đầu ngay, không chờ animation chạy hết
+          fillLoaderBlocksUpTo(halfBlocks);
+
           if (!boxKqxs) {
+            resetLoaderBlocks();
             loaderBar.style.display = 'none';
             return (statusMsg.innerHTML = '❌ Không có dữ liệu ngày này.');
           }
@@ -166,6 +208,10 @@
 
           statusMsg.innerHTML =
             'Đã có kết quả!!!. Đang phân tích ý nghĩa dãy số của bạn cho dzui....';
+
+          // Nửa sau tăng dần trong lúc chờ AI phân tích, chừa lại khối cuối
+          // để đánh dấu thời điểm AI thực sự trả lời xong
+          animateLoaderBlocks(halfBlocks, loaderBlocks.length - 1, 400);
 
           const aiResponse = await fetch(`/api/phan-tich-ai`, {
             method: 'POST',
@@ -177,6 +223,10 @@
             })
           });
           const aiData = await aiResponse.json();
+
+          // AI đã trả lời -> hoàn tất toàn bộ thanh loading ngay lập tức
+          fillLoaderBlocksUpTo(loaderBlocks.length);
+          clearInterval(loaderTickTimer);
 
           if (aiData.aiText && aiData.aiText.trim() !== '') {
             aiContent.innerHTML = aiData.aiText;
@@ -190,6 +240,7 @@
         } catch (err) {
           console.error(err);
           statusMsg.innerHTML = '❌ Lỗi hệ thống.';
+          resetLoaderBlocks();
           loaderBar.style.display = 'none';
         } finally {
           submitBtn.disabled = false;
