@@ -1,5 +1,5 @@
 :root {
-  --bg-color: #e0e0e0;
+  --bg-color: #1a1a2e;
   --panel-bg: #ffffff;
   --pixel-border: 4px solid #000;
   --accent-color: #00ff00;
@@ -15,13 +15,275 @@ body {
   image-rendering: pixelated;
   overflow-x: hidden;
 }
+
+.audio-toggle-btn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 10000;
+  background: #333;
+  color: #fff;
+  border: 3px solid #000;
+  border-radius: 0;
+  box-shadow: 3px 3px 0px #000;
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 1.3em;
+  line-height: 1;
+  transition: all 0.1s;
+}
+.audio-toggle-btn:hover {
+  background: var(--accent-color);
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0px #000;
+}
+.audio-toggle-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #000;
+}
+.audio-toggle-btn.muted {
+  opacity: 0.6;
+}
+
+.ambient-bg {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -1;
+  background-color: var(--bg-color);
+}
+
+.light-source {
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  width: 300%;
+  height: 150%;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    45deg,
+    rgba(255, 238, 204, 0) 40%,
+    rgba(255, 238, 204, 0.25) 48%,
+    rgba(255, 238, 204, 0.25) 52%,
+    rgba(255, 238, 204, 0) 60%
+  );
+  animation: pan-light 10s infinite linear;
+  -webkit-mask-image: radial-gradient(
+    ellipse at 50% -20%,
+    black 20%,
+    transparent 70%
+  );
+  mask-image: radial-gradient(ellipse at 50% -20%, black 20%, transparent 70%);
+}
+
+.light-source.two {
+  transform: translateX(-50%) rotate(-20deg);
+  animation-duration: 8s;
+}
+
+@keyframes pan-light {
+  from {
+    transform: translateX(-50%) rotate(-40deg);
+  }
+  to {
+    transform: translateX(-50%) rotate(40deg);
+  }
+}
+
+.mote-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.mote {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #fff;
+  border-radius: 50%;
+  opacity: 0.5;
+  box-shadow: 0 0 10px #ffeecc;
+  animation: float-mote 10s infinite linear;
+}
+
+@keyframes float-mote {
+  0% {
+    transform: translateY(110vh) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.7;
+  }
+  90% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(-10vh) translateX(100px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+#supernova-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.4s ease-out;
+}
+
+:root {
+  --rain-bg: rgba(17, 20, 29, 0.55);
+  --drop-color: #38bdf8;
+}
+
+.rain-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 9998;
+  background-color: var(--rain-bg);
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
+}
+
+.rain-overlay.active {
+  opacity: 1;
+}
+
+.rain-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.rain-drop {
+  position: absolute;
+  bottom: 100%;
+  width: 2px;
+  background: linear-gradient(to top, transparent, var(--drop-color));
+  animation: rainFall 10s infinite linear;
+}
+
+.rain-drop.back {
+  opacity: 0.4;
+  height: 30px;
+  animation-duration: 2s;
+  animation-timing-function: linear;
+}
+
+.rain-drop.mid {
+  opacity: 0.6;
+  height: 50px;
+  animation-duration: 1.2s;
+  animation-timing-function: linear;
+}
+
+.rain-drop.front {
+  opacity: 1;
+  height: 80px;
+  animation-duration: 0.7s;
+  animation-timing-function: linear;
+}
+
+@keyframes rainFall {
+  from {
+    transform: translateY(0vh);
+  }
+  to {
+    transform: translateY(110vh);
+  }
+}
+
+.splash {
+  position: absolute;
+  bottom: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: var(--drop-color);
+  opacity: 0;
+  transform: scale(0);
+  animation: rainSplashUp 10s infinite ease-out;
+}
+
+@keyframes rainSplashUp {
+  0% {
+    opacity: 0;
+    transform: scale(0) translateY(0);
+  }
+  2% {
+    opacity: 1;
+    transform: scale(1) translateY(-10px);
+  }
+  5% {
+    opacity: 0;
+    transform: scale(1.5, 0.5) translateY(-50px);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.lightning {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% 0%, white, transparent 40%);
+  opacity: 0;
+  animation: rainFlash 10s infinite step-end;
+}
+
+@keyframes rainFlash {
+  0%,
+  94%,
+  100% {
+    opacity: 0;
+  }
+  94.1% {
+    opacity: 0.6;
+  }
+  94.2% {
+    opacity: 0.1;
+  }
+  94.3% {
+    opacity: 0.8;
+  }
+  94.6% {
+    opacity: 0;
+  }
+}
 .container {
+  position: relative;
   border: var(--pixel-border);
   box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.2);
   border-radius: 0;
   max-width: 80vw;
   margin: 60px auto;
   padding: 20px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.32) 0%,
+    rgba(255, 255, 255, 0.1) 55%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
 }
 .site-footer {
   text-align: right;
@@ -81,6 +343,114 @@ select {
 input:focus-visible {
   outline: none;
 }
+.date-field {
+  position: relative;
+}
+#date {
+  cursor: pointer;
+}
+.date-picker-popup {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  width: 100%;
+  min-width: 280px;
+  background: #fff;
+  border: 3px solid #000;
+  border-radius: 0;
+  box-shadow: 6px 6px 0px #000;
+  padding: 12px;
+  z-index: 50;
+  font-size: 0.95em;
+  transform: scale(0.8) translateY(-6px);
+  transform-origin: top left;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.18s ease-out,
+    transform 0.18s ease-out,
+    visibility 0.18s ease-out;
+}
+.date-picker-popup.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: scale(0.8) translateY(0);
+}
+.date-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+.date-nav-btn {
+  background: #333;
+  color: #fff;
+  border: 3px solid #000 !important;
+  border-radius: 0 !important;
+  box-shadow: 3px 3px 0px #000;
+  cursor: pointer;
+  width: auto;
+  padding: 4px 10px;
+  font-size: 0.9em;
+  line-height: 1;
+}
+.date-nav-btn:hover:not(:disabled) {
+  background: var(--accent-color);
+  color: #000;
+}
+.date-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.date-picker-weekdays,
+.date-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.date-picker-weekdays {
+  margin-bottom: 6px;
+  font-weight: 900;
+  text-align: center;
+  font-size: 0.85em;
+}
+.date-picker-grid > div {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #000;
+  cursor: pointer;
+  font-weight: bold;
+  background: #fff;
+}
+.date-picker-grid > div:hover:not(.disabled):not(.empty) {
+  background: var(--accent-color);
+}
+.date-picker-grid > div.empty {
+  border: none;
+  cursor: default;
+  background: transparent;
+}
+.date-picker-grid > div.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  background: #e0e0e0;
+}
+.date-picker-grid > div.today {
+  border-color: #ff8c00;
+  box-shadow: 2px 2px 0px #ff8c00;
+}
+.date-picker-grid > div.selected {
+  background: var(--accent-color);
+  box-shadow: 2px 2px 0px #000;
+}
+
 .btn {
   background: #333;
   color: #fff;
@@ -111,7 +481,7 @@ input:focus-visible {
 #status-message {
   margin-top: 40px;
   font-weight: bold;
-  color: #0056b3;
+  color: #000;
   text-align: center;
 }
 #result-box {
@@ -122,7 +492,6 @@ input:focus-visible {
   background-color: #f8f9fa;
   border: 1px solid #dee2e6;
 }
-
 
 /* Animation Neon */
 .neon-text {
@@ -393,6 +762,29 @@ input:focus-visible {
   margin: 0 auto;
 }
 
+@keyframes shakeFailed {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8px) rotate(-1deg);
+  }
+  40% {
+    transform: translateX(8px) rotate(1deg);
+  }
+  60% {
+    transform: translateX(-6px) rotate(-1deg);
+  }
+  80% {
+    transform: translateX(6px) rotate(1deg);
+  }
+}
+
+.shake-effect {
+  animation: shakeFailed 0.5s ease-in-out;
+}
+
 .gif-lottery-container {
   background-color: #8fa2a2;
 }
@@ -518,6 +910,19 @@ input:focus-visible {
     transform: scale(0.6);
     transform-origin: center;
     margin: 12px 0;
+  }
+  .result-title-box {
+    flex-direction: column;
+  }
+  .result-title-box .cat-dance-gif:first-child {
+    order: 1;
+  }
+  #result-title {
+    order: 2;
+    width: 100%;
+  }
+  .result-title-box .cat-dance-gif:last-child {
+    order: 3;
   }
 }
 

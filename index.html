@@ -17,6 +17,27 @@
     ></script>
   </head>
   <body>
+    <audio id="bg-music" src="audios/lottery_tickets_audio.mp3" loop preload="auto"></audio>
+    <audio id="win-audio" src="audios/winning.mp3" preload="auto"></audio>
+    <audio id="lose-audio" src="audios/losing.mp3" preload="auto"></audio>
+    <button
+      type="button"
+      id="audio-toggle-btn"
+      class="audio-toggle-btn pixel-border"
+      aria-label="Tắt/mở âm thanh"
+    >
+      🔊
+    </button>
+    <div class="ambient-bg" aria-hidden="true">
+      <div class="light-source"></div>
+      <div class="light-source two"></div>
+      <div class="mote-container" id="mote-container"></div>
+    </div>
+    <canvas id="supernova-canvas"></canvas>
+    <div id="rain-overlay" class="rain-overlay">
+      <div class="lightning"></div>
+      <div class="rain-container" id="rain-container"></div>
+    </div>
     <div class="container">
       <div class="title-box">
         <div class="gif-lottery-container">
@@ -53,7 +74,39 @@
         </div>
         <div class="form-group pixel-border">
           <label>Ngày mở thưởng:</label>
-          <input type="date" id="date" />
+          <div class="date-field" id="date-field">
+            <input
+              type="text"
+              id="date"
+              readonly
+              autocomplete="off"
+              placeholder="DD/MM/YYYY"
+            />
+            <div class="date-picker-popup" id="date-picker-popup">
+              <div class="date-picker-header">
+                <button
+                  type="button"
+                  class="date-nav-btn"
+                  id="date-prev-month"
+                >
+                  &#9664;
+                </button>
+                <span id="date-picker-label"></span>
+                <button
+                  type="button"
+                  class="date-nav-btn"
+                  id="date-next-month"
+                >
+                  &#9654;
+                </button>
+              </div>
+              <div class="date-picker-weekdays">
+                <span>CN</span><span>T2</span><span>T3</span><span>T4</span
+                ><span>T5</span><span>T6</span><span>T7</span>
+              </div>
+              <div class="date-picker-grid" id="date-picker-grid"></div>
+            </div>
+          </div>
         </div>
         <div class="form-group pixel-border">
           <label>Dãy số trên vé (5 hoặc 6 chữ số):</label>
@@ -128,8 +181,192 @@
       const resultTitle = document.getElementById('result-title');
       const resultDetails = document.getElementById('result-details');
       const loaderBlocks = Array.from(document.querySelectorAll('.block-meter'));
+      const supernovaCanvas = document.getElementById('supernova-canvas');
+      const supernovaCtx = supernovaCanvas.getContext('2d');
+      const rainOverlay = document.getElementById('rain-overlay');
+      const rainContainer = document.getElementById('rain-container');
+      const bgMusic = document.getElementById('bg-music');
+      const winAudio = document.getElementById('win-audio');
+      const loseAudio = document.getElementById('lose-audio');
+      const audioToggleBtn = document.getElementById('audio-toggle-btn');
 
-      dateInput.valueAsDate = new Date();
+      bgMusic.volume = 0.35;
+      winAudio.volume = 0.9;
+      loseAudio.volume = 0.9;
+
+      let audioEnabled = localStorage.getItem('audioEnabled') !== 'false';
+
+      function updateAudioToggleUI() {
+        audioToggleBtn.textContent = audioEnabled ? '🔊' : '🔇';
+        audioToggleBtn.classList.toggle('muted', !audioEnabled);
+      }
+
+      function tryPlayBgMusic() {
+        if (!audioEnabled) return;
+        bgMusic.play().catch(() => {});
+      }
+
+      updateAudioToggleUI();
+      tryPlayBgMusic();
+      document.addEventListener('click', tryPlayBgMusic, { once: true });
+
+      audioToggleBtn.addEventListener('click', () => {
+        audioEnabled = !audioEnabled;
+        localStorage.setItem('audioEnabled', String(audioEnabled));
+        updateAudioToggleUI();
+        if (audioEnabled) {
+          tryPlayBgMusic();
+        } else {
+          bgMusic.pause();
+        }
+      });
+
+      function playSfxWithDucking(audioEl, repeatCount) {
+        if (!audioEnabled) return;
+
+        bgMusic.pause();
+        let remaining = repeatCount;
+
+        function playOnce() {
+          if (audioEl.readyState >= 1) {
+            try {
+              audioEl.currentTime = 0;
+            } catch (err) {
+              console.warn('Không thể tua lại audio:', err);
+            }
+          }
+          audioEl.play().catch(err => console.warn('Không thể phát audio:', err));
+        }
+
+        function onEnded() {
+          remaining--;
+          if (remaining > 0) {
+            playOnce();
+          } else {
+            audioEl.removeEventListener('ended', onEnded);
+            tryPlayBgMusic();
+          }
+        }
+
+        audioEl.addEventListener('ended', onEnded);
+        playOnce();
+      }
+
+      const dateField = document.getElementById('date-field');
+      const datePickerPopup = document.getElementById('date-picker-popup');
+      const datePickerLabel = document.getElementById('date-picker-label');
+      const datePickerGrid = document.getElementById('date-picker-grid');
+      const datePrevMonthBtn = document.getElementById('date-prev-month');
+      const dateNextMonthBtn = document.getElementById('date-next-month');
+
+      const MONTH_NAMES_VI = [
+        'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4',
+        'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8',
+        'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12',
+      ];
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      let selectedDate = new Date(today);
+      let viewYear = selectedDate.getFullYear();
+      let viewMonth = selectedDate.getMonth();
+
+      function pad2(n) {
+        return String(n).padStart(2, '0');
+      }
+
+      function formatDateDisplay(d) {
+        return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+      }
+
+      function isSameDay(a, b) {
+        return (
+          a.getFullYear() === b.getFullYear() &&
+          a.getMonth() === b.getMonth() &&
+          a.getDate() === b.getDate()
+        );
+      }
+
+      function renderDatePicker() {
+        datePickerLabel.textContent = `${MONTH_NAMES_VI[viewMonth]} ${viewYear}`;
+
+        const isCurrentMonth =
+          viewYear === today.getFullYear() && viewMonth === today.getMonth();
+        dateNextMonthBtn.disabled = isCurrentMonth;
+
+        datePickerGrid.innerHTML = '';
+        const firstWeekday = new Date(viewYear, viewMonth, 1).getDay();
+        const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+        for (let i = 0; i < firstWeekday; i++) {
+          const empty = document.createElement('div');
+          empty.className = 'empty';
+          datePickerGrid.appendChild(empty);
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+          const cellDate = new Date(viewYear, viewMonth, day);
+          const cell = document.createElement('div');
+          cell.textContent = day;
+
+          if (cellDate > today) cell.classList.add('disabled');
+          if (isSameDay(cellDate, today)) cell.classList.add('today');
+          if (isSameDay(cellDate, selectedDate)) cell.classList.add('selected');
+
+          if (cellDate <= today) {
+            cell.addEventListener('click', () => {
+              selectedDate = cellDate;
+              dateInput.value = formatDateDisplay(selectedDate);
+              closeDatePicker();
+            });
+          }
+          datePickerGrid.appendChild(cell);
+        }
+      }
+
+      function openDatePicker() {
+        viewYear = selectedDate.getFullYear();
+        viewMonth = selectedDate.getMonth();
+        renderDatePicker();
+        datePickerPopup.classList.add('open');
+      }
+
+      function closeDatePicker() {
+        datePickerPopup.classList.remove('open');
+      }
+
+      dateInput.addEventListener('click', () => {
+        if (datePickerPopup.classList.contains('open')) {
+          closeDatePicker();
+        } else {
+          openDatePicker();
+        }
+      });
+
+      datePrevMonthBtn.addEventListener('click', () => {
+        viewMonth--;
+        if (viewMonth < 0) {
+          viewMonth = 11;
+          viewYear--;
+        }
+        renderDatePicker();
+      });
+
+      dateNextMonthBtn.addEventListener('click', () => {
+        if (dateNextMonthBtn.disabled) return;
+        viewMonth++;
+        if (viewMonth > 11) {
+          viewMonth = 0;
+          viewYear++;
+        }
+        renderDatePicker();
+      });
+
+      document.addEventListener('click', e => {
+        if (!dateField.contains(e.target)) closeDatePicker();
+      });
+
+      dateInput.value = formatDateDisplay(selectedDate);
 
       const TICKET_NUMBER_REGEX = /^\d{5,6}$/;
 
@@ -168,13 +405,14 @@
       async function startProcess() {
         const province = provinceSelect.value;
         const userNumber = ticketInput.value.trim();
-        const selectedDate = dateInput.value;
 
         if (!TICKET_NUMBER_REGEX.test(userNumber))
           return alert('Vui lòng nhập dãy số hợp lệ (5 hoặc 6 chữ số)!');
 
-        const [year, month, day] = selectedDate.split('-');
-        const formattedDate = `${day}-${month}-${year}`;
+        if (!selectedDate || selectedDate > today)
+          return alert('Ngày mở thưởng không được ở trong tương lai!');
+
+        const formattedDate = `${pad2(selectedDate.getDate())}-${pad2(selectedDate.getMonth() + 1)}-${selectedDate.getFullYear()}`;
 
         submitBtn.disabled = true;
         statusMsg.innerHTML = 'Đang truy xuất dữ liệu...';
@@ -311,14 +549,209 @@
           resultDetails.innerHTML = winDetails
             .map(item => `<div>${item}</div>`)
             .join('');
-          confetti();
+          triggerConfettiBurstEffect();
+          playSfxWithDucking(winAudio, 1);
         } else {
           catGifs.forEach(img => (img.src = LOSE_GIF));
           resultTitle.innerHTML = 'KẾT QUẢ: KHÔNG TRÚNG THƯỞNG';
           resultTitle.className = 'neon-text-failed';
           resultDetails.innerHTML = '';
+
+          resultBox.classList.remove('shake-effect');
+          void resultBox.offsetWidth;
+          resultBox.classList.add('shake-effect');
+          triggerRainEffect();
+          playSfxWithDucking(loseAudio, 1);
         }
         return { isWin: isWinning, details: winDetails.join(', ') };
+      }
+
+      function resizeSupernovaCanvas() {
+        supernovaCanvas.width = window.innerWidth;
+        supernovaCanvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resizeSupernovaCanvas);
+      resizeSupernovaCanvas();
+
+      const confettiColorPicker = (function () {
+        const colors = ['#C084FC', '#22D3EE', '#A78BFA', '#F472B6'];
+        let index = 0;
+        return {
+          next() {
+            index = index < colors.length - 1 ? index + 1 : 0;
+            return colors[index];
+          },
+        };
+      })();
+
+      class ConfettiCircle {
+        constructor({ x, y, r, c, v }) {
+          this.x = x;
+          this.y = y;
+          this.r = r;
+          this.c = c;
+          this.v = v;
+          this.alpha = 1;
+          this.decay = Math.random() * 0.01 + 0.007;
+        }
+
+        draw(ctx) {
+          ctx.globalAlpha = this.alpha;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
+          ctx.fillStyle = this.c;
+          ctx.fill();
+          ctx.closePath();
+          ctx.globalAlpha = 1;
+        }
+
+        update() {
+          this.x += this.v.x;
+          this.y += this.v.y;
+          this.alpha -= this.decay;
+        }
+      }
+
+      let confettiCircles = [];
+      let confettiAnimationId = null;
+      let confettiTimeouts = [];
+
+      function spawnConfettiBurst(x, y) {
+        const circleCount = Math.floor(Math.random() * 30) + 50;
+        for (let i = 0; i < circleCount; i++) {
+          const angle = Math.random() * 2 * Math.PI;
+          const velocity = Math.random() * 6 + 2;
+          confettiCircles.push(
+            new ConfettiCircle({
+              x,
+              y,
+              r: Math.random() * 4 + 2,
+              c: confettiColorPicker.next(),
+              v: {
+                x: Math.cos(angle) * velocity,
+                y: Math.sin(angle) * velocity,
+              },
+            })
+          );
+        }
+      }
+
+      function stopConfettiBurstEffect() {
+        if (confettiAnimationId) {
+          cancelAnimationFrame(confettiAnimationId);
+          confettiAnimationId = null;
+        }
+        confettiTimeouts.forEach(id => clearTimeout(id));
+        confettiTimeouts = [];
+        confettiCircles = [];
+      }
+
+      function triggerConfettiBurstEffect() {
+        stopConfettiBurstEffect();
+        resizeSupernovaCanvas();
+
+        const width = supernovaCanvas.width;
+        const height = supernovaCanvas.height;
+        const burstCount = 16;
+        const burstInterval = 220;
+
+        supernovaCanvas.style.opacity = '1';
+
+        const burstPositions = Array.from({ length: burstCount }, () => ({
+          x: width * (0.1 + Math.random() * 0.8),
+          y: height * (0.1 + Math.random() * 0.8),
+        }));
+
+        burstPositions.forEach((pos, i) => {
+          confettiTimeouts.push(
+            setTimeout(() => spawnConfettiBurst(pos.x, pos.y), i * burstInterval)
+          );
+        });
+
+        function loop() {
+          supernovaCtx.clearRect(0, 0, width, height);
+          confettiCircles.forEach(c => c.update());
+          confettiCircles = confettiCircles.filter(c => c.alpha > c.decay);
+          confettiCircles.forEach(c => c.draw(supernovaCtx));
+          confettiAnimationId = requestAnimationFrame(loop);
+        }
+        confettiAnimationId = requestAnimationFrame(loop);
+
+        const scheduleWindow = burstCount * burstInterval;
+        confettiTimeouts.push(
+          setTimeout(() => {
+            supernovaCanvas.style.opacity = '0';
+            setTimeout(() => {
+              stopConfettiBurstEffect();
+              supernovaCtx.clearRect(0, 0, width, height);
+            }, 400);
+          }, scheduleWindow + 2600)
+        );
+      }
+
+      (function initAmbientMotes() {
+        const moteContainer = document.getElementById('mote-container');
+        const numMotes = 50;
+
+        for (let i = 0; i < numMotes; i++) {
+          const mote = document.createElement('div');
+          mote.className = 'mote';
+
+          const size = Math.random() * 3 + 1;
+          mote.style.width = `${size}px`;
+          mote.style.height = `${size}px`;
+
+          mote.style.left = `${Math.random() * 100}vw`;
+          mote.style.animationDelay = `${Math.random() * -10}s`;
+          mote.style.animationDuration = `${Math.random() * 5 + 8}s`;
+
+          moteContainer.appendChild(mote);
+        }
+      })();
+
+      (function initRainDrops() {
+        const totalDrops = 400;
+        const layerDurations = { back: 2, mid: 1.2, front: 0.7 };
+
+        for (let i = 0; i < totalDrops; i++) {
+          const drop = document.createElement('div');
+          const splash = document.createElement('div');
+          const layer = Math.random();
+
+          let layerClass = 'front';
+          if (layer < 0.33) layerClass = 'back';
+          else if (layer < 0.66) layerClass = 'mid';
+
+          drop.className = `rain-drop ${layerClass}`;
+          splash.className = 'splash';
+
+          const leftPosition = `${Math.random() * 105 - 5}%`;
+          drop.style.left = leftPosition;
+          splash.style.left = leftPosition;
+
+          const delay = Math.random() * -10;
+          drop.style.animationDelay = `${delay}s`;
+
+          const dropDuration = layerDurations[layerClass];
+          splash.style.animationDelay = `${delay + dropDuration}s`;
+
+          rainContainer.appendChild(drop);
+          rainContainer.appendChild(splash);
+        }
+      })();
+
+      let rainEffectTimeout = null;
+
+      function triggerRainEffect() {
+        if (rainEffectTimeout) {
+          clearTimeout(rainEffectTimeout);
+          rainEffectTimeout = null;
+        }
+        rainOverlay.classList.add('active');
+        rainEffectTimeout = setTimeout(() => {
+          rainOverlay.classList.remove('active');
+          rainEffectTimeout = null;
+        }, 6000);
       }
     </script>
   </body>
