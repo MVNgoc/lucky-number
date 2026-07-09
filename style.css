@@ -291,7 +291,8 @@ body {
   font-size: 0.85em;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #555;
+  color: #fff;
+  font-weight: 500;
 }
 h1 {
   text-align: center;
@@ -349,7 +350,6 @@ input:focus-visible,
 }
 #date {
   cursor: pointer;
-  font-size: 16px;
 }
 .date-picker-popup {
   position: absolute;
