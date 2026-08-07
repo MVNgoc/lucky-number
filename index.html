@@ -4,11 +4,29 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DÒ VÉ TỰ ĐỘNG</title>
-    <link
-      rel="icon"
-      type="image/png"
-      href="https://cdn-icons-png.flaticon.com/512/9642/9642882.png"
+    <meta
+      name="description"
+      content="Chụp ảnh vé số, máy tự đọc và dò kết quả xổ số ba miền"
     />
+
+    <!-- Icon serve từ chính project, không trỏ CDN: icon dùng cho màn hình chính
+         hay bị bỏ qua khi lấy cross-origin, và link ngoài có thể chết bất cứ lúc
+         nào. Ảnh gốc là hình đen trên nền trong suốt nên đã ghép nền trắng đặc —
+         iOS biến vùng trong suốt thành đen, để nguyên thì icon đen trên đen. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#1a1a2e" />
+    <!-- iOS không đọc manifest, phải khai riêng để mở ở chế độ toàn màn hình -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- black chứ không black-translucent: translucent cho nội dung tràn lên
+         thanh trạng thái, sẽ đè lên nút âm thanh đang fixed ở top 16px -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="Dò Vé" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
     <link rel="stylesheet" href="style.css" />
     <script
       src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"
