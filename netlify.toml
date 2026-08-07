@@ -3,6 +3,11 @@
   functions = "netlify/functions"
 
 [[redirects]]
+  from = "/api/dai"
+  to = "/.netlify/functions/dai"
+  status = 200
+
+[[redirects]]
   from = "/api/kqxs"
   to = "/.netlify/functions/kqxs"
   status = 200

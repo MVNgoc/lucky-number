@@ -4,12 +4,21 @@ const cors = require('cors');
 require('dotenv').config();
 
 const { fetchKqxsHtml } = require('./lib/kqxsService');
+const {
+  fetchDaiListForWeekday,
+  weekdayFromDateParam
+} = require('./lib/daiService');
 const { analyzeTicket, refreshModelList } = require('./lib/aiService');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
+
+app.get('/api/dai', async (req, res) => {
+  const weekday = weekdayFromDateParam(req.query.date);
+  res.json(await fetchDaiListForWeekday(weekday));
+});
 
 app.get('/api/kqxs', async (req, res) => {
   const { date, province } = req.query;

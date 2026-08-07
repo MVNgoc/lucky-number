@@ -58,23 +58,8 @@
       <div class="ticket-form">
         <div class="form-group pixel-border">
           <label>Chọn Đài:</label>
-          <select id="province">
-            <optgroup label="Xổ Số Miền Nam">
-              <option value="ben-tre">Bến Tre</option>
-              <option value="dong-nai">Đồng Nai</option>
-              <option value="can-tho">Cần Thơ</option>
-              <option value="soc-trang">Sóc Trăng</option>
-            </optgroup>
-
-            <optgroup label="Xổ Số Miền Bắc">
-              <option value="mien-bac">Miền Bắc (Hà Nội)</option>
-              <option value="bac-ninh">Bắc Ninh</option>
-            </optgroup>
-
-            <optgroup label="Xổ Số Miền Trung">
-              <option value="da-nang">Đà Nẵng</option>
-              <option value="khanh-hoa">Khánh Hòa</option>
-            </optgroup>
+          <select id="province" disabled>
+            <option value="">Đang tải danh sách đài...</option>
           </select>
         </div>
         <div class="form-group pixel-border">
@@ -330,6 +315,8 @@
               selectedDate = cellDate;
               dateInput.value = formatDateDisplay(selectedDate);
               closeDatePicker();
+              // Mỗi đài chỉ quay 1-2 ngày/tuần -> đổi ngày là đổi danh sách đài
+              loadProvinceList();
             });
           }
           datePickerGrid.appendChild(cell);
@@ -380,6 +367,87 @@
 
       dateInput.value = formatDateDisplay(selectedDate);
 
+      function formatDateParam(d) {
+        return `${pad2(d.getDate())}-${pad2(d.getMonth() + 1)}-${d.getFullYear()}`;
+      }
+
+      // Danh sách đài lấy động từ /api/dai (server scrape minhngoc.net.vn) và
+      // đã được lọc theo thứ của ngày đang chọn. Value của mỗi option là
+      // "<mien>/<slug>" vì URL kết quả cần cả 2 phần.
+      const LAST_PROVINCE_KEY = 'lastProvince';
+      const provinceGroupsByWeekday = new Map();
+      let provinceLoadToken = 0;
+
+      async function loadProvinceList() {
+        const weekday = selectedDate.getDay();
+        const token = ++provinceLoadToken;
+
+        const cached = provinceGroupsByWeekday.get(weekday);
+        if (cached) return renderProvinceOptions(cached);
+
+        provinceSelect.disabled = true;
+        submitBtn.disabled = true;
+        provinceSelect.innerHTML =
+          '<option value="">Đang tải danh sách đài...</option>';
+
+        try {
+          const response = await fetch(
+            `/api/dai?date=${formatDateParam(selectedDate)}`
+          );
+          if (!response.ok) throw new Error(`API trả HTTP ${response.status}`);
+          const { groups } = await response.json();
+          // Người dùng đã đổi ngày lần nữa trong lúc chờ -> bỏ kết quả cũ
+          if (token !== provinceLoadToken) return;
+
+          provinceGroupsByWeekday.set(weekday, groups);
+          renderProvinceOptions(groups);
+        } catch (err) {
+          if (token !== provinceLoadToken) return;
+          console.error('Không thể tải danh sách đài:', err);
+          provinceSelect.innerHTML =
+            '<option value="">Không tải được danh sách đài</option>';
+          // Hay gặp nhất: mở trang bằng Live Server / file:// nên không có /api
+          statusMsg.innerHTML =
+            `❌ Không tải được danh sách đài (${err.message}).<br>` +
+            'Trang này cần backend: chạy <b>npm start</b> rồi mở ' +
+            '<b>http://localhost:3000</b> — Live Server hoặc mở file trực tiếp ' +
+            'sẽ không có <b>/api</b>.';
+        }
+      }
+
+      function renderProvinceOptions(groups) {
+        const previous =
+          provinceSelect.value || localStorage.getItem(LAST_PROVINCE_KEY);
+
+        provinceSelect.innerHTML = '';
+        groups.forEach(group => {
+          const optgroup = document.createElement('optgroup');
+          optgroup.label = group.regionName;
+          group.provinces.forEach(province => {
+            const option = document.createElement('option');
+            option.value = `${group.region}/${province.slug}`;
+            option.textContent = province.name;
+            optgroup.appendChild(option);
+          });
+          provinceSelect.appendChild(optgroup);
+        });
+
+        // Giữ nguyên đài đang chọn nếu ngày mới nó vẫn mở thưởng
+        if (previous) provinceSelect.value = previous;
+        if (!provinceSelect.value && provinceSelect.options.length > 0) {
+          provinceSelect.selectedIndex = 0;
+        }
+
+        provinceSelect.disabled = false;
+        submitBtn.disabled = false;
+      }
+
+      provinceSelect.addEventListener('change', () => {
+        localStorage.setItem(LAST_PROVINCE_KEY, provinceSelect.value);
+      });
+
+      loadProvinceList();
+
       const TICKET_NUMBER_REGEX = /^\d{5,6}$/;
 
       let loaderTickTimer = null;
@@ -414,9 +482,26 @@
         }, intervalMs);
       }
 
+      // minhngoc trả về kỳ quay gần nhất của đài khi ngày yêu cầu không phải
+      // ngày đài đó mở thưởng (ví dụ xin Hà Nội 07/08 -> trả kết quả 06/08).
+      // Phải tự đối chiếu ngày, nếu không sẽ dò vé với số của kỳ khác.
+      function extractResultDate(boxKqxs) {
+        const text =
+          boxKqxs.querySelector('.ngay')?.textContent ||
+          boxKqxs.querySelector('.title')?.textContent ||
+          '';
+        return text.match(/(\d{2}\/\d{2}\/\d{4})/)?.[1] || null;
+      }
+
       async function startProcess() {
         const province = provinceSelect.value;
+        const provinceName =
+          provinceSelect.options[provinceSelect.selectedIndex]?.textContent ||
+          'Đài đã chọn';
         const userNumber = ticketInput.value.trim();
+
+        if (!province)
+          return alert('Chưa tải được danh sách đài, vui lòng tải lại trang!');
 
         if (!TICKET_NUMBER_REGEX.test(userNumber))
           return alert('Vui lòng nhập dãy số hợp lệ (5 hoặc 6 chữ số)!');
@@ -424,7 +509,7 @@
         if (!selectedDate || selectedDate > today)
           return alert('Ngày mở thưởng không được ở trong tương lai!');
 
-        const formattedDate = `${pad2(selectedDate.getDate())}-${pad2(selectedDate.getMonth() + 1)}-${selectedDate.getFullYear()}`;
+        const formattedDate = formatDateParam(selectedDate);
 
         submitBtn.disabled = true;
         statusMsg.innerHTML = 'Đang truy xuất dữ liệu...';
@@ -452,6 +537,19 @@
             resetLoaderBlocks();
             loaderBar.style.display = 'none';
             return (statusMsg.innerHTML = '❌ Không có dữ liệu ngày này.');
+          }
+
+          const resultDate = extractResultDate(boxKqxs);
+          const requestedDate = formatDateDisplay(selectedDate);
+          if (resultDate && resultDate !== requestedDate) {
+            resetLoaderBlocks();
+            loaderBar.style.display = 'none';
+            // Dropdown đã lọc theo thứ, nên lệch ngày gần như luôn là do kỳ
+            // quay hôm nay chưa công bố kết quả (các đài quay từ chiều tối).
+            const reason = isSameDay(selectedDate, today)
+              ? `⏳ ${provinceName} chưa có kết quả ngày ${requestedDate}. Kỳ quay gần nhất: ${resultDate}.`
+              : `❌ ${provinceName} không mở thưởng ngày ${requestedDate}. Kỳ quay gần nhất: ${resultDate}.`;
+            return (statusMsg.innerHTML = reason);
           }
 
           const matchResult = executeMatchLogic(userNumber, boxKqxs);
