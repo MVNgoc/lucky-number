@@ -9,10 +9,12 @@ const {
   weekdayFromDateParam
 } = require('./lib/daiService');
 const { analyzeTicket, refreshModelList } = require('./lib/aiService');
+const { readTicket } = require('./lib/ticketReader');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+// Ảnh vé gửi lên dạng base64 nên vượt xa mức 100kb mặc định của express.json
+app.use(express.json({ limit: '8mb' }));
 app.use(express.static(__dirname));
 
 app.get('/api/dai', async (req, res) => {
@@ -27,6 +29,18 @@ app.get('/api/kqxs', async (req, res) => {
     res.send(html);
   } catch (error) {
     res.status(error.statusCode || 500).send(error.message);
+  }
+});
+
+app.post('/api/doc-ve', async (req, res) => {
+  try {
+    const { image, mimeType } = req.body;
+    res.json(await readTicket(image, mimeType));
+  } catch (e) {
+    console.error('Lỗi đọc vé:', e);
+    res
+      .status(e.statusCode || 500)
+      .json({ error: e.statusCode ? e.message : 'Không đọc được ảnh vé.' });
   }
 });
 

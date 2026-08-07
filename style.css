@@ -480,6 +480,80 @@ input:focus-visible,
   transform: translate(4px, 4px);
   box-shadow: 0px 0px 0px #000;
 }
+/* Chụp vé -> AI đọc -> tự điền form */
+.btn-scan {
+  background: #fff;
+  color: #000;
+  border: 3px solid #000;
+  border-radius: 0;
+  box-shadow: 4px 4px 0px #000;
+  transition: all 0.1s;
+  cursor: pointer;
+  width: 100%;
+  padding: 12px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1em;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.btn-scan:hover:not(:disabled) {
+  background: var(--accent-color);
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px #000;
+}
+
+.btn-scan:active:not(:disabled) {
+  transform: translate(4px, 4px);
+  box-shadow: 0px 0px 0px #000;
+}
+
+.btn-scan:disabled {
+  background: #e0e0e0;
+  color: #777;
+  cursor: not-allowed;
+  box-shadow: 2px 2px 0px #555;
+}
+
+.scan-status {
+  margin-top: 10px;
+  font-size: 0.85em;
+  font-weight: bold;
+  line-height: 1.5;
+}
+
+.scan-status:empty {
+  display: none;
+}
+
+.scan-status.working {
+  color: #005f8c;
+}
+
+.scan-status.ok {
+  color: #0a7a0a;
+}
+
+.scan-status.warn {
+  color: #a13800;
+}
+
+/* Nhấp nháy ô vừa được AI điền để người dùng biết chỗ nào cần đối chiếu */
+.filled-flash {
+  animation: filled-flash 0.9s steps(1) 2;
+}
+
+@keyframes filled-flash {
+  0%,
+  49% {
+    background: var(--accent-color);
+  }
+  50%,
+  100% {
+    background: #fff;
+  }
+}
+
 #status-message {
   margin-top: 40px;
   font-weight: bold;

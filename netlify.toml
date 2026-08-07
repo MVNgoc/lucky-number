@@ -13,6 +13,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/doc-ve"
+  to = "/.netlify/functions/doc-ve"
+  status = 200
+
+[[redirects]]
   from = "/api/phan-tich-ai"
   to = "/.netlify/functions/phan-tich-ai"
   status = 200

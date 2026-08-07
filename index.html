@@ -56,6 +56,20 @@
         <h1 class="pixel-title">DÒ VÉ TỰ ĐỘNG</h1>
       </div>
       <div class="ticket-form">
+        <div class="form-group pixel-border scan-group">
+          <label>Chụp vé, máy tự điền:</label>
+          <input
+            type="file"
+            id="ticket-photo"
+            accept="image/*"
+            capture="environment"
+            hidden
+          />
+          <button type="button" id="scan-btn" class="btn-scan pixel-border">
+            📷 CHỤP / CHỌN ẢNH VÉ
+          </button>
+          <div id="scan-status" class="scan-status"></div>
+        </div>
         <div class="form-group pixel-border">
           <label>Chọn Đài:</label>
           <select id="province" disabled>
@@ -449,6 +463,133 @@
       loadProvinceList();
 
       const TICKET_NUMBER_REGEX = /^\d{5,6}$/;
+
+      // ----- Chụp vé, AI đọc rồi tự điền -----
+      const photoInput = document.getElementById('ticket-photo');
+      const scanBtn = document.getElementById('scan-btn');
+      const scanStatus = document.getElementById('scan-status');
+
+      // Ảnh điện thoại 3-8MB, base64 lại phình thêm ~33%, vượt giới hạn body
+      // của serverless function. Thu về 1024px là quá đủ để đọc số in cỡ lớn.
+      const MAX_IMAGE_DIM = 1024;
+
+      async function shrinkImageToBase64(file) {
+        // imageOrientation: ảnh chụp dọc bằng điện thoại có cờ EXIF, không xử
+        // lý thì vé bị nằm ngang và AI đọc sai
+        const bitmap = await createImageBitmap(file, {
+          imageOrientation: 'from-image'
+        });
+        const scale = Math.min(
+          1,
+          MAX_IMAGE_DIM / Math.max(bitmap.width, bitmap.height)
+        );
+        const width = Math.round(bitmap.width * scale);
+        const height = Math.round(bitmap.height * scale);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height);
+        bitmap.close();
+
+        return canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+      }
+
+      function flashField(el) {
+        el.classList.remove('filled-flash');
+        void el.offsetWidth;
+        el.classList.add('filled-flash');
+      }
+
+      // Điền những gì đọc được, trả về danh sách phần KHÔNG điền được để báo
+      // cho người dùng biết chỗ nào phải tự nhập
+      async function applyReadTicket(data) {
+        const missing = [];
+
+        if (data.ngay) {
+          const [day, month, year] = data.ngay.split('/').map(Number);
+          const ticketDate = new Date(year, month - 1, day);
+          ticketDate.setHours(0, 0, 0, 0);
+          if (ticketDate > today) {
+            missing.push('ngày (vé chưa tới ngày mở thưởng)');
+          } else {
+            selectedDate = ticketDate;
+            dateInput.value = formatDateDisplay(selectedDate);
+            flashField(dateInput);
+          }
+        } else {
+          missing.push('ngày');
+        }
+
+        // Danh sách đài phụ thuộc thứ của ngày -> phải load lại trước khi chọn
+        await loadProvinceList();
+
+        if (data.province) {
+          provinceSelect.value = data.province;
+          if (provinceSelect.value === data.province) {
+            localStorage.setItem(LAST_PROVINCE_KEY, data.province);
+            flashField(provinceSelect);
+          } else {
+            missing.push(`đài (${data.provinceName} không quay ngày này)`);
+          }
+        } else {
+          missing.push(data.daiText ? `đài (đọc ra "${data.daiText}")` : 'đài');
+        }
+
+        if (data.soVe) {
+          ticketInput.value = data.soVe;
+          flashField(ticketInput);
+        } else {
+          missing.push('dãy số');
+        }
+
+        return missing;
+      }
+
+      scanBtn.addEventListener('click', () => photoInput.click());
+
+      photoInput.addEventListener('change', async () => {
+        const file = photoInput.files[0];
+        if (!file) return;
+
+        scanBtn.disabled = true;
+        scanStatus.className = 'scan-status working';
+        scanStatus.textContent = '⏳ Đang đọc ảnh vé...';
+
+        try {
+          const image = await shrinkImageToBase64(file);
+          const response = await fetch('/api/doc-ve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image, mimeType: 'image/jpeg' })
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+
+          const missing = await applyReadTicket(data);
+
+          if (missing.length === 0) {
+            scanStatus.className = 'scan-status ok';
+            scanStatus.textContent =
+              '✅ Đã điền xong. Đối chiếu lại với tờ vé rồi bấm DÒ VÉ.';
+          } else if (missing.length === 3) {
+            scanStatus.className = 'scan-status warn';
+            scanStatus.textContent =
+              '⚠️ Không đọc được gì từ ảnh. Chụp lại rõ hơn, đủ sáng, không bị che.';
+          } else {
+            scanStatus.className = 'scan-status warn';
+            scanStatus.textContent = `⚠️ Chưa đọc được: ${missing.join(', ')}. Phần đó nhập tay giúp nhé.`;
+          }
+        } catch (err) {
+          console.error('Lỗi đọc vé:', err);
+          scanStatus.className = 'scan-status warn';
+          scanStatus.textContent = `❌ Không đọc được ảnh vé (${err.message}).`;
+        } finally {
+          scanBtn.disabled = false;
+          // Reset để chụp lại cùng một file vẫn kích hoạt change
+          photoInput.value = '';
+        }
+      });
 
       let loaderTickTimer = null;
 
