@@ -534,16 +534,47 @@ input:focus-visible,
   margin-top: 8px;
 }
 
-.scrape-warning {
-  margin-bottom: 14px;
+/* Khối thông báo dùng chung cho mọi vùng trạng thái. Panel chứa là kính mờ có
+   đèn nền chạy qua nên độ sáng đổi liên tục — phải có nền đặc mới đọc được.
+   Trạng thái báo bằng màu nền, không dùng icon trong câu chữ. */
+.status-box {
   padding: 10px 12px;
   border: 3px solid #000;
-  background: #ffcc33;
+  background: #fff;
   box-shadow: 3px 3px 0px #000;
   color: #000;
   font-size: 0.85em;
   font-weight: bold;
   line-height: 1.5;
+}
+
+.status-box:empty {
+  display: none;
+}
+
+.status-box.working {
+  background: #cfe6ff;
+}
+
+.status-box.ok {
+  background: var(--accent-color);
+}
+
+.status-box.warn {
+  background: #ffcc33;
+}
+
+.status-box.error {
+  background: #d92b2b;
+  color: #fff;
+}
+
+.status-box.info {
+  background: #e4e4e4;
+}
+
+.scrape-warning {
+  margin-bottom: 14px;
 }
 
 /* Overlay camera trực tiếp */
@@ -622,39 +653,9 @@ input:focus-visible,
    hẳn nền đặc + viền đen như các ô khác để luôn đọc được. */
 .scan-status {
   margin-top: 10px;
-  padding: 8px 10px;
-  border: 3px solid #000;
-  background: #fff;
-  box-shadow: 3px 3px 0px #000;
-  color: #000;
-  font-size: 0.85em;
-  font-weight: bold;
-  line-height: 1.5;
   text-align: center;
 }
 
-.scan-status:empty {
-  display: none;
-}
-
-/* Không dùng icon trong câu nữa: màu nền của khối là thứ báo trạng thái, nên
-   4 trạng thái phải phân biệt được bằng màu, kể cả lỗi và cảnh báo. */
-.scan-status.working {
-  background: #cfe6ff;
-}
-
-.scan-status.ok {
-  background: var(--accent-color);
-}
-
-.scan-status.warn {
-  background: #ffcc33;
-}
-
-.scan-status.error {
-  background: #d92b2b;
-  color: #fff;
-}
 
 /* Nhấp nháy ô vừa được AI điền để người dùng biết chỗ nào cần đối chiếu */
 .filled-flash {
@@ -672,10 +673,12 @@ input:focus-visible,
   }
 }
 
+/* Không đặt color ở đây: selector id thắng .status-box.error nên chữ sẽ bị ép
+   thành đen trên nền đỏ */
 #status-message {
-  margin-top: 40px;
-  font-weight: bold;
-  color: #000;
+  /* Cùng bề rộng với .ticket-form để khối thông báo thẳng hàng với các ô nhập */
+  max-width: 520px;
+  margin: 40px auto 0;
   text-align: center;
 }
 #result-box {

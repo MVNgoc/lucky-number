@@ -81,7 +81,12 @@
         <h1 class="pixel-title">DÒ VÉ TỰ ĐỘNG</h1>
       </div>
       <div class="ticket-form">
-        <div id="scrape-warning" class="scrape-warning" role="alert" hidden></div>
+        <div
+          id="scrape-warning"
+          class="scrape-warning status-box warn"
+          role="alert"
+          hidden
+        ></div>
         <div class="form-group pixel-border scan-group">
           <label>Chụp vé, máy tự điền:</label>
           <input
@@ -97,14 +102,14 @@
             class="btn-scan pixel-border"
             hidden
           >
-            📸 MỞ CAMERA CHỤP TRỰC TIẾP
+            MỞ CAMERA CHỤP TRỰC TIẾP
           </button>
           <button type="button" id="scan-btn" class="btn-scan pixel-border">
-            📷 CHỤP / CHỌN ẢNH VÉ
+            CHỤP / CHỌN ẢNH VÉ
           </button>
           <div
             id="scan-status"
-            class="scan-status"
+            class="scan-status status-box"
             role="status"
             aria-live="polite"
           ></div>
@@ -181,7 +186,12 @@
           DÒ VÉ !!!
         </button>
       </div>
-      <div id="status-message" role="status" aria-live="polite"></div>
+      <div
+        id="status-message"
+        class="status-box"
+        role="status"
+        aria-live="polite"
+      ></div>
 
       <div id="result-box">
         <div class="result-title-box">
@@ -549,6 +559,13 @@
         return `${pad2(d.getDate())}-${pad2(d.getMonth() + 1)}-${d.getFullYear()}`;
       }
 
+      // Trạng thái thể hiện bằng màu nền của khối, không dùng icon trong câu.
+      // Truyền state rỗng để xoá thông báo.
+      function setStatusMsg(state, html = '') {
+        statusMsg.className = `status-box${state ? ' ' + state : ''}`;
+        statusMsg.innerHTML = html;
+      }
+
       // Danh sách đài lấy động từ /api/dai (server scrape minhngoc.net.vn) và
       // đã được lọc theo thứ của ngày đang chọn. Value của mỗi option là
       // "<mien>/<slug>" vì URL kết quả cần cả 2 phần.
@@ -586,11 +603,13 @@
           provinceSelect.innerHTML =
             '<option value="">Không tải được danh sách đài</option>';
           // Hay gặp nhất: mở trang bằng Live Server / file:// nên không có /api
-          statusMsg.innerHTML =
-            `❌ Không tải được danh sách đài (${err.message}).<br>` +
-            'Trang này cần backend: chạy <b>npm start</b> rồi mở ' +
-            '<b>http://localhost:3000</b> — Live Server hoặc mở file trực tiếp ' +
-            'sẽ không có <b>/api</b>.';
+          setStatusMsg(
+            'error',
+            `Không tải được danh sách đài (${err.message}).<br>` +
+              'Trang này cần backend: chạy <b>npm start</b> rồi mở ' +
+              '<b>http://localhost:3000</b> — Live Server hoặc mở file trực tiếp ' +
+              'sẽ không có <b>/api</b>.'
+          );
         }
       }
 
@@ -605,7 +624,7 @@
         const parts = [];
         if (status.provinces?.source === 'fallback') parts.push('danh sách đài');
         if (status.schedule?.source === 'fallback') parts.push('lịch quay');
-        scrapeWarning.textContent = `⚠️ Không lấy được ${parts.join(' và ')} từ minhngoc, đang dùng dữ liệu dự phòng — có thể đã cũ. Nên đối chiếu lại với nguồn chính thức.`;
+        scrapeWarning.textContent = `Không lấy được ${parts.join(' và ')} từ minhngoc, đang dùng dữ liệu dự phòng — có thể đã cũ. Nên đối chiếu lại với nguồn chính thức.`;
         scrapeWarning.hidden = false;
       }
 
@@ -804,7 +823,7 @@
 
       // Trạng thái thể hiện bằng màu nền của cả khối, không dùng icon trong câu
       function setScanStatus(state, text) {
-        scanStatus.className = state ? `scan-status ${state}` : 'scan-status';
+        scanStatus.className = `scan-status status-box${state ? ' ' + state : ''}`;
         scanStatus.textContent = text;
       }
 
@@ -1068,7 +1087,7 @@
         const formattedDate = formatDateParam(selectedDate);
 
         submitBtn.disabled = true;
-        statusMsg.innerHTML = 'Đang truy xuất dữ liệu...';
+        setStatusMsg('working', 'Đang truy xuất dữ liệu...');
         resultBox.style.display = 'none';
         aiSection.style.display = 'none';
         loaderBar.style.display = 'grid';
@@ -1092,7 +1111,7 @@
           if (!boxKqxs) {
             resetLoaderBlocks();
             loaderBar.style.display = 'none';
-            return (statusMsg.innerHTML = '❌ Không có dữ liệu ngày này.');
+            return setStatusMsg('warn', 'Không có dữ liệu ngày này.');
           }
 
           const resultDate = extractResultDate(boxKqxs);
@@ -1102,16 +1121,21 @@
             loaderBar.style.display = 'none';
             // Dropdown đã lọc theo thứ, nên lệch ngày gần như luôn là do kỳ
             // quay hôm nay chưa công bố kết quả (các đài quay từ chiều tối).
-            const reason = isSameDay(selectedDate, today)
-              ? `⏳ ${provinceName} chưa có kết quả ngày ${requestedDate}. Kỳ quay gần nhất: ${resultDate}.`
-              : `❌ ${provinceName} không mở thưởng ngày ${requestedDate}. Kỳ quay gần nhất: ${resultDate}.`;
-            return (statusMsg.innerHTML = reason);
+            const chuaCoKetQua = isSameDay(selectedDate, today);
+            return setStatusMsg(
+              chuaCoKetQua ? 'working' : 'warn',
+              chuaCoKetQua
+                ? `${provinceName} chưa có kết quả ngày ${requestedDate}. Kỳ quay gần nhất: ${resultDate}.`
+                : `${provinceName} không mở thưởng ngày ${requestedDate}. Kỳ quay gần nhất: ${resultDate}.`
+            );
           }
 
           const matchResult = executeMatchLogic(userNumber, boxKqxs, province);
 
-          statusMsg.innerHTML =
-            'Đã có kết quả!!!. Đang phân tích ý nghĩa dãy số của bạn cho dzui....';
+          setStatusMsg(
+            'working',
+            'Đã có kết quả!!!. Đang phân tích ý nghĩa dãy số của bạn cho dzui....'
+          );
 
           // Nửa sau tăng dần trong lúc chờ AI phân tích, chừa lại khối cuối
           // để đánh dấu thời điểm AI thực sự trả lời xong
@@ -1136,10 +1160,17 @@
           // Kết quả dò vé ở trên vẫn đúng và vẫn hiển thị; AI lỗi thì chỉ mất
           // phần phân tích cho vui, không được xoá kết quả đã dò
           if (!aiResponse.ok) {
-            statusMsg.innerHTML =
-              aiResponse.status === 429
-                ? `⏳ ${aiData.error || 'Bạn dùng hơi nhanh, thử lại sau nhé.'}`
-                : 'ℹ️ Kết quả dò vé ở trên vẫn đúng, chỉ phần phân tích AI đang lỗi.';
+            if (aiResponse.status === 429) {
+              setStatusMsg(
+                'warn',
+                aiData.error || 'Bạn dùng hơi nhanh, thử lại sau nhé.'
+              );
+            } else {
+              setStatusMsg(
+                'info',
+                'Kết quả dò vé ở trên vẫn đúng, chỉ phần phân tích AI đang lỗi.'
+              );
+            }
             return;
           }
 
@@ -1150,10 +1181,10 @@
             console.warn('AI không trả về nội dung.');
           }
 
-          statusMsg.innerHTML = '';
+          setStatusMsg('');
         } catch (err) {
           console.error(err);
-          statusMsg.innerHTML = '❌ Lỗi hệ thống.';
+          setStatusMsg('error', 'Lỗi hệ thống.');
           resetLoaderBlocks();
           loaderBar.style.display = 'none';
         } finally {
