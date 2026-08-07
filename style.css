@@ -369,16 +369,23 @@ input:focus-visible,
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+  /* visibility hoãn tới khi fade xong để vẫn thấy hiệu ứng lúc đóng */
   transition:
     opacity 0.18s ease-out,
     transform 0.18s ease-out,
-    visibility 0.18s ease-out;
+    visibility 0s linear 0.18s;
 }
 .date-picker-popup.open {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
   transform: scale(0.8) translateY(0);
+  /* Lúc mở phải visible ngay, không thì focus() vào ô ngày thất bại vì
+     phần tử vẫn đang visibility:hidden trong suốt thời gian transition */
+  transition:
+    opacity 0.18s ease-out,
+    transform 0.18s ease-out,
+    visibility 0s linear;
 }
 .date-picker-header {
   display: flex;
@@ -431,6 +438,14 @@ input:focus-visible,
   font-weight: bold;
   background: #fff;
 }
+/* Điều hướng lưới ngày bằng mũi tên cần thấy rõ đang ở ô nào */
+.date-picker-grid > div:focus-visible {
+  outline: 3px solid #000;
+  outline-offset: -3px;
+  background: var(--accent-color);
+  color: #000;
+}
+
 .date-picker-grid > div:hover:not(.disabled):not(.empty) {
   background: var(--accent-color);
 }
@@ -517,6 +532,18 @@ input:focus-visible,
 
 .btn-scan + .btn-scan {
   margin-top: 8px;
+}
+
+.scrape-warning {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 3px solid #000;
+  background: #ffcc33;
+  box-shadow: 3px 3px 0px #000;
+  color: #000;
+  font-size: 0.85em;
+  font-weight: bold;
+  line-height: 1.5;
 }
 
 /* Overlay camera trực tiếp */

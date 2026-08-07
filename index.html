@@ -38,7 +38,14 @@
       <div class="light-source two"></div>
       <div class="mote-container" id="mote-container"></div>
     </div>
-    <div id="camera-overlay" class="camera-overlay" hidden>
+    <div
+      id="camera-overlay"
+      class="camera-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Chụp ảnh vé số"
+      hidden
+    >
       <div class="camera-stage">
         <video id="camera-video" playsinline autoplay muted></video>
         <div class="camera-guide" aria-hidden="true"></div>
@@ -74,6 +81,7 @@
         <h1 class="pixel-title">DÒ VÉ TỰ ĐỘNG</h1>
       </div>
       <div class="ticket-form">
+        <div id="scrape-warning" class="scrape-warning" role="alert" hidden></div>
         <div class="form-group pixel-border scan-group">
           <label>Chụp vé, máy tự điền:</label>
           <input
@@ -94,7 +102,12 @@
           <button type="button" id="scan-btn" class="btn-scan pixel-border">
             📷 CHỤP / CHỌN ẢNH VÉ
           </button>
-          <div id="scan-status" class="scan-status"></div>
+          <div
+            id="scan-status"
+            class="scan-status"
+            role="status"
+            aria-live="polite"
+          ></div>
         </div>
         <div class="form-group pixel-border">
           <label>Chọn Đài:</label>
@@ -111,22 +124,46 @@
               readonly
               autocomplete="off"
               placeholder="DD/MM/YYYY"
+              role="combobox"
+              aria-haspopup="dialog"
+              aria-expanded="false"
+              aria-controls="date-picker-popup"
             />
-            <div class="date-picker-popup" id="date-picker-popup">
+            <div
+              class="date-picker-popup"
+              id="date-picker-popup"
+              role="dialog"
+              aria-label="Chọn ngày mở thưởng"
+            >
               <div class="date-picker-header">
-                <button type="button" class="date-nav-btn" id="date-prev-month">
+                <button
+                  type="button"
+                  class="date-nav-btn"
+                  id="date-prev-month"
+                  aria-label="Tháng trước"
+                >
                   &#9664;
                 </button>
                 <span id="date-picker-label"></span>
-                <button type="button" class="date-nav-btn" id="date-next-month">
+                <button
+                  type="button"
+                  class="date-nav-btn"
+                  id="date-next-month"
+                  aria-label="Tháng sau"
+                >
                   &#9654;
                 </button>
               </div>
-              <div class="date-picker-weekdays">
+              <div class="date-picker-weekdays" aria-hidden="true">
                 <span>CN</span><span>T2</span><span>T3</span><span>T4</span
                 ><span>T5</span><span>T6</span><span>T7</span>
               </div>
-              <div class="date-picker-grid" id="date-picker-grid"></div>
+              <div
+                class="date-picker-grid"
+                id="date-picker-grid"
+                role="grid"
+                aria-label="Ngày trong tháng"
+              ></div>
             </div>
           </div>
         </div>
@@ -140,11 +177,11 @@
           />
         </div>
 
-        <button class="btn pixel-border" onclick="startProcess()">
+        <button id="submit-btn" class="btn pixel-border" onclick="startProcess()">
           DÒ VÉ !!!
         </button>
       </div>
-      <div id="status-message"></div>
+      <div id="status-message" role="status" aria-live="polite"></div>
 
       <div id="result-box">
         <div class="result-title-box">
@@ -196,8 +233,11 @@
       const dateInput = document.getElementById('date');
       const provinceSelect = document.getElementById('province');
       const ticketInput = document.getElementById('ticket-number');
-      const submitBtn = document.querySelector('.btn');
+      // Chọn theo id, không theo .btn: nút CHỤP trong overlay camera cũng mang
+      // class .btn và nằm trước .container trong DOM nên querySelector bắt nhầm
+      const submitBtn = document.getElementById('submit-btn');
       const statusMsg = document.getElementById('status-message');
+      const scrapeWarning = document.getElementById('scrape-warning');
       const resultBox = document.getElementById('result-box');
       const aiSection = document.getElementById('ai-section');
       const aiContent = document.getElementById('ai-content');
@@ -307,6 +347,8 @@
       let selectedDate = new Date(today);
       let viewYear = selectedDate.getFullYear();
       let viewMonth = selectedDate.getMonth();
+      // Ngày đang có tiêu điểm khi đi bằng bàn phím (khác ngày đã chọn)
+      let focusedDate = null;
 
       function pad2(n) {
         return String(n).padStart(2, '0');
@@ -346,39 +388,135 @@
           const cell = document.createElement('div');
           cell.textContent = day;
 
-          if (cellDate > today) cell.classList.add('disabled');
+          const isDisabled = cellDate > today;
+          if (isDisabled) cell.classList.add('disabled');
           if (isSameDay(cellDate, today)) cell.classList.add('today');
           if (isSameDay(cellDate, selectedDate)) cell.classList.add('selected');
 
-          if (cellDate <= today) {
-            cell.addEventListener('click', () => {
-              selectedDate = cellDate;
-              dateInput.value = formatDateDisplay(selectedDate);
-              closeDatePicker();
-              // Mỗi đài chỉ quay 1-2 ngày/tuần -> đổi ngày là đổi danh sách đài
-              loadProvinceList();
+          cell.setAttribute('role', 'gridcell');
+          cell.setAttribute(
+            'aria-label',
+            `${day} ${MONTH_NAMES_VI[viewMonth]} ${viewYear}`
+          );
+          cell.dataset.day = String(day);
+
+          if (isDisabled) {
+            cell.setAttribute('aria-disabled', 'true');
+          } else {
+            // Chỉ một ô nhận tab, còn lại điều hướng bằng mũi tên — cách chuẩn
+            // cho lưới ngày, khỏi phải Tab 31 lần
+            cell.tabIndex = isSameDay(cellDate, focusedDate || selectedDate)
+              ? 0
+              : -1;
+            cell.addEventListener('click', () => pickDate(cellDate));
+            cell.addEventListener('keydown', event => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                pickDate(cellDate);
+              }
             });
           }
           datePickerGrid.appendChild(cell);
         }
+
+        // Không có ô nào chọn được trong tháng đang xem (tháng tương lai) thì
+        // cho ô đầu tiên còn dùng được nhận tab để bàn phím không bị kẹt
+        const focusables = datePickerGrid.querySelectorAll('[tabindex="0"]');
+        if (focusables.length === 0) {
+          const firstUsable = datePickerGrid.querySelector(
+            'div[role="gridcell"]:not([aria-disabled="true"])'
+          );
+          if (firstUsable) firstUsable.tabIndex = 0;
+        }
       }
 
-      function openDatePicker() {
+      function pickDate(cellDate) {
+        selectedDate = cellDate;
+        dateInput.value = formatDateDisplay(selectedDate);
+        closeDatePicker();
+        dateInput.focus();
+        // Mỗi đài chỉ quay 1-2 ngày/tuần -> đổi ngày là đổi danh sách đài
+        loadProvinceList();
+      }
+
+      // Di chuyển tiêu điểm trong lưới, tự sang tháng trước/sau khi vượt biên.
+      // Mốc là một Date tuyệt đối chứ không phải (số ngày + viewMonth): sau khi
+      // đổi tháng thì viewMonth đã khác, cộng dồn kiểu kia sẽ nhảy sai ngày.
+      function moveDateFocus(deltaDays) {
+        const base = focusedDate || selectedDate;
+        const target = new Date(
+          base.getFullYear(),
+          base.getMonth(),
+          base.getDate() + deltaDays
+        );
+        target.setHours(0, 0, 0, 0);
+        if (target > today) return;
+
+        focusedDate = target;
+        viewYear = target.getFullYear();
+        viewMonth = target.getMonth();
+        renderDatePicker();
+        datePickerGrid.querySelector('[tabindex="0"]')?.focus();
+      }
+
+      function isDatePickerOpen() {
+        return datePickerPopup.classList.contains('open');
+      }
+
+      function openDatePicker(focusGrid = false) {
         viewYear = selectedDate.getFullYear();
         viewMonth = selectedDate.getMonth();
+        focusedDate = new Date(selectedDate);
         renderDatePicker();
         datePickerPopup.classList.add('open');
+        dateInput.setAttribute('aria-expanded', 'true');
+        if (focusGrid) datePickerGrid.querySelector('[tabindex="0"]')?.focus();
       }
 
       function closeDatePicker() {
         datePickerPopup.classList.remove('open');
+        dateInput.setAttribute('aria-expanded', 'false');
+        focusedDate = null;
       }
 
-      dateInput.addEventListener('click', () => {
-        if (datePickerPopup.classList.contains('open')) {
+      function toggleDatePicker() {
+        if (isDatePickerOpen()) closeDatePicker();
+        else openDatePicker();
+      }
+
+      dateInput.addEventListener('click', toggleDatePicker);
+
+      dateInput.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          toggleDatePicker();
+        } else if (event.key === 'ArrowDown' && !isDatePickerOpen()) {
+          event.preventDefault();
+          openDatePicker(true);
+        }
+      });
+
+      // Mũi tên đi trong lưới ngày, Esc đóng và trả tiêu điểm về ô ngày
+      dateField.addEventListener('keydown', event => {
+        if (!isDatePickerOpen()) return;
+
+        if (event.key === 'Escape') {
+          event.preventDefault();
           closeDatePicker();
-        } else {
-          openDatePicker();
+          dateInput.focus();
+          return;
+        }
+
+        const steps = {
+          ArrowLeft: -1,
+          ArrowRight: 1,
+          ArrowUp: -7,
+          ArrowDown: 7
+        };
+        if (event.target === dateInput) return;
+        if (event.key in steps) {
+          event.preventDefault();
+          moveDateFocus(steps[event.key]);
         }
       });
 
@@ -435,12 +573,13 @@
             `/api/dai?date=${formatDateParam(selectedDate)}`
           );
           if (!response.ok) throw new Error(`API trả HTTP ${response.status}`);
-          const { groups } = await response.json();
+          const { groups, status } = await response.json();
           // Người dùng đã đổi ngày lần nữa trong lúc chờ -> bỏ kết quả cũ
           if (token !== provinceLoadToken) return;
 
           provinceGroupsByWeekday.set(weekday, groups);
           renderProvinceOptions(groups);
+          showScrapeWarning(status);
         } catch (err) {
           if (token !== provinceLoadToken) return;
           console.error('Không thể tải danh sách đài:', err);
@@ -453,6 +592,21 @@
             '<b>http://localhost:3000</b> — Live Server hoặc mở file trực tiếp ' +
             'sẽ không có <b>/api</b>.';
         }
+      }
+
+      // minhngoc đổi layout -> server rơi về danh sách cứng, app vẫn chạy nhưng
+      // dữ liệu có thể đã lệch. Nói thẳng ra thay vì để người dùng tin tưởng
+      // vào một danh sách cũ.
+      function showScrapeWarning(status) {
+        if (!status?.usingFallback) {
+          scrapeWarning.hidden = true;
+          return;
+        }
+        const parts = [];
+        if (status.provinces?.source === 'fallback') parts.push('danh sách đài');
+        if (status.schedule?.source === 'fallback') parts.push('lịch quay');
+        scrapeWarning.textContent = `⚠️ Không lấy được ${parts.join(' và ')} từ minhngoc, đang dùng dữ liệu dự phòng — có thể đã cũ. Nên đối chiếu lại với nguồn chính thức.`;
+        scrapeWarning.hidden = false;
       }
 
       function renderProvinceOptions(groups) {
@@ -489,6 +643,82 @@
       loadProvinceList();
 
       const TICKET_NUMBER_REGEX = /^\d{5,6}$/;
+
+      // ----- Lọc HTML do AI sinh ra trước khi gán vào trang -----
+      // Prompt yêu cầu AI chỉ trả div kèm style inline, nhưng output của model
+      // không phải thứ mình kiểm soát được. Gán thẳng vào innerHTML là mở cửa
+      // cho <img onerror=...> nếu sau này prompt nhận thêm input tự do.
+      const AI_ALLOWED_TAGS = new Set([
+        'DIV', 'SPAN', 'P', 'B', 'STRONG', 'I', 'EM', 'U', 'SMALL', 'BIG',
+        'BR', 'HR', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'UL', 'OL', 'LI',
+        'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TH', 'TD', 'CAPTION',
+        'PRE', 'CODE', 'BLOCKQUOTE', 'CENTER', 'FONT'
+      ]);
+      const AI_ALLOWED_ATTRS = new Set([
+        'style',
+        'class',
+        'colspan',
+        'rowspan',
+        'align'
+      ]);
+      // Xoá hẳn cả nội dung bên trong, không chỉ bóc thẻ
+      const AI_DROP_TAGS = new Set([
+        'SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'LINK', 'META',
+        'BASE', 'FORM', 'INPUT', 'BUTTON', 'TEXTAREA', 'SELECT', 'SVG',
+        'MATH', 'IMG', 'VIDEO', 'AUDIO', 'SOURCE', 'TEMPLATE'
+      ]);
+
+      function isSafeStyleValue(value) {
+        // position:fixed/sticky để tránh khối AI phủ lên UI của trang
+        return !/url\s*\(|expression\s*\(|javascript:|position\s*:\s*(fixed|sticky)/i.test(
+          value
+        );
+      }
+
+      function sanitizeAiHtml(html) {
+        // DOMParser tạo document không có browsing context: script không chạy,
+        // onerror của img không kích hoạt, nên bóc tách ở đây là an toàn.
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+
+        function walk(parent) {
+          Array.from(parent.childNodes).forEach(node => {
+            if (node.nodeType === Node.TEXT_NODE) return;
+            if (node.nodeType !== Node.ELEMENT_NODE) {
+              node.remove();
+              return;
+            }
+
+            const tag = node.tagName.toUpperCase();
+            if (AI_DROP_TAGS.has(tag)) {
+              node.remove();
+              return;
+            }
+
+            if (!AI_ALLOWED_TAGS.has(tag)) {
+              // Thẻ lạ nhưng không nguy hiểm: bóc thẻ, giữ nội dung
+              walk(node);
+              node.replaceWith(...Array.from(node.childNodes));
+              return;
+            }
+
+            Array.from(node.attributes).forEach(attr => {
+              const name = attr.name.toLowerCase();
+              if (!AI_ALLOWED_ATTRS.has(name)) {
+                node.removeAttribute(attr.name);
+                return;
+              }
+              if (name === 'style' && !isSafeStyleValue(attr.value)) {
+                node.removeAttribute('style');
+              }
+            });
+
+            walk(node);
+          });
+        }
+
+        walk(doc.body);
+        return doc.body.innerHTML;
+      }
 
       // ----- Chụp vé, AI đọc rồi tự điền -----
       const photoInput = document.getElementById('ticket-photo');
@@ -672,13 +902,46 @@
         cameraVideo.srcObject = null;
       }
 
+      let focusBeforeCamera = null;
+
       function closeCameraOverlay() {
         stopCamera();
         cameraOverlay.hidden = true;
+        // Trả tiêu điểm về đúng nút đã mở, không thì nó kẹt trong phần tử vừa
+        // bị ẩn và người dùng bàn phím mất dấu hoàn toàn
+        (focusBeforeCamera || cameraBtn).focus();
+        focusBeforeCamera = null;
       }
 
+      // Overlay là modal: Tab phải quay vòng trong nó, Esc thì đóng
+      cameraOverlay.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeCameraOverlay();
+          return;
+        }
+        if (event.key !== 'Tab') return;
+
+        const focusables = [cameraShutter, cameraSwitch, cameraCancel].filter(
+          el => !el.hidden && !el.disabled
+        );
+        if (focusables.length === 0) return;
+
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      });
+
       cameraBtn.addEventListener('click', async () => {
+        focusBeforeCamera = document.activeElement;
         cameraOverlay.hidden = false;
+        cameraShutter.focus();
         try {
           await startCamera();
         } catch (err) {
@@ -827,7 +1090,7 @@
             return (statusMsg.innerHTML = reason);
           }
 
-          const matchResult = executeMatchLogic(userNumber, boxKqxs);
+          const matchResult = executeMatchLogic(userNumber, boxKqxs, province);
 
           statusMsg.innerHTML =
             'Đã có kết quả!!!. Đang phân tích ý nghĩa dãy số của bạn cho dzui....';
@@ -850,15 +1113,25 @@
           // AI đã trả lời -> hoàn tất toàn bộ thanh loading ngay lập tức
           fillLoaderBlocksUpTo(loaderBlocks.length);
           clearInterval(loaderTickTimer);
+          loaderBar.style.display = 'none';
+
+          // Kết quả dò vé ở trên vẫn đúng và vẫn hiển thị; AI lỗi thì chỉ mất
+          // phần phân tích cho vui, không được xoá kết quả đã dò
+          if (!aiResponse.ok) {
+            statusMsg.innerHTML =
+              aiResponse.status === 429
+                ? `⏳ ${aiData.error || 'Bạn dùng hơi nhanh, thử lại sau nhé.'}`
+                : 'ℹ️ Kết quả dò vé ở trên vẫn đúng, chỉ phần phân tích AI đang lỗi.';
+            return;
+          }
 
           if (aiData.aiText && aiData.aiText.trim() !== '') {
-            aiContent.innerHTML = aiData.aiText;
+            aiContent.innerHTML = sanitizeAiHtml(aiData.aiText);
             aiSection.style.display = 'block';
           } else {
             console.warn('AI không trả về nội dung.');
           }
 
-          loaderBar.style.display = 'none';
           statusMsg.innerHTML = '';
         } catch (err) {
           console.error(err);
@@ -880,7 +1153,7 @@
         return cell.textContent.replace(/\s+/g, '').split('-').filter(Boolean);
       }
 
-      function executeMatchLogic(userNumber, htmlElement) {
+      function executeMatchLogic(userNumber, htmlElement, province) {
         let winDetails = [],
           isWinning = false,
           dbNumber = null,
@@ -910,8 +1183,12 @@
           }
         });
 
-        // Giải khuyến khích riêng của đại lý: trùng 4/3/2 số cuối Giải Đặc Biệt
-        if (!dbFullMatch && dbNumber) {
+        // Giải khuyến khích riêng của đại lý: trùng 4/3/2 số cuối Giải Đặc Biệt.
+        // Đây là lệ của đại lý vé số miền Nam. Miền Bắc có cơ cấu 27 giải khác
+        // hẳn nên chưa áp dụng, tránh báo trúng sai.
+        const isMienNam = typeof province === 'string' && province.startsWith('mien-nam/');
+
+        if (isMienNam && !dbFullMatch && dbNumber) {
           for (const len of [4, 3, 2]) {
             if (userNumber.length < len) continue;
             const userSuffix = userNumber.slice(-len);
