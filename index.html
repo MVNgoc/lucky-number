@@ -38,6 +38,24 @@
       <div class="light-source two"></div>
       <div class="mote-container" id="mote-container"></div>
     </div>
+    <div id="camera-overlay" class="camera-overlay" hidden>
+      <div class="camera-stage">
+        <video id="camera-video" playsinline autoplay muted></video>
+        <div class="camera-guide" aria-hidden="true"></div>
+      </div>
+      <p class="camera-hint">Đưa trọn tờ vé vào khung, tránh bị lóa đèn</p>
+      <div class="camera-actions">
+        <button type="button" id="camera-shutter" class="btn pixel-border">
+          CHỤP
+        </button>
+        <button type="button" id="camera-switch" class="btn-scan pixel-border">
+          ĐỔI CAMERA
+        </button>
+        <button type="button" id="camera-cancel" class="btn-scan pixel-border">
+          ĐÓNG
+        </button>
+      </div>
+    </div>
     <canvas id="supernova-canvas"></canvas>
     <div id="rain-overlay" class="rain-overlay">
       <div class="lightning"></div>
@@ -65,6 +83,14 @@
             capture="environment"
             hidden
           />
+          <button
+            type="button"
+            id="camera-btn"
+            class="btn-scan pixel-border"
+            hidden
+          >
+            📸 MỞ CAMERA CHỤP TRỰC TIẾP
+          </button>
           <button type="button" id="scan-btn" class="btn-scan pixel-border">
             📷 CHỤP / CHỌN ẢNH VÉ
           </button>
@@ -546,18 +572,15 @@
         return missing;
       }
 
-      scanBtn.addEventListener('click', () => photoInput.click());
-
-      photoInput.addEventListener('change', async () => {
-        const file = photoInput.files[0];
-        if (!file) return;
-
+      // Dùng chung cho 2 đường vào ảnh: chọn file và chụp bằng camera
+      async function scanAndFill(getImageBase64) {
         scanBtn.disabled = true;
+        cameraBtn.disabled = true;
         scanStatus.className = 'scan-status working';
         scanStatus.textContent = '⏳ Đang đọc ảnh vé...';
 
         try {
-          const image = await shrinkImageToBase64(file);
+          const image = await getImageBase64();
           const response = await fetch('/api/doc-ve', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -586,9 +609,120 @@
           scanStatus.textContent = `❌ Không đọc được ảnh vé (${err.message}).`;
         } finally {
           scanBtn.disabled = false;
-          // Reset để chụp lại cùng một file vẫn kích hoạt change
-          photoInput.value = '';
+          cameraBtn.disabled = false;
         }
+      }
+
+      scanBtn.addEventListener('click', () => photoInput.click());
+
+      photoInput.addEventListener('change', async () => {
+        const file = photoInput.files[0];
+        if (!file) return;
+        await scanAndFill(() => shrinkImageToBase64(file));
+        // Reset để chọn lại cùng một file vẫn kích hoạt change
+        photoInput.value = '';
+      });
+
+      // ----- Camera trực tiếp -----
+      const cameraOverlay = document.getElementById('camera-overlay');
+      const cameraVideo = document.getElementById('camera-video');
+      const cameraBtn = document.getElementById('camera-btn');
+      const cameraShutter = document.getElementById('camera-shutter');
+      const cameraSwitch = document.getElementById('camera-switch');
+      const cameraCancel = document.getElementById('camera-cancel');
+
+      let cameraStream = null;
+      let cameraFacing = 'environment';
+
+      // getUserMedia chỉ chạy trong secure context (https hoặc localhost). Mở
+      // trang qua http://<IP-LAN>:3000 trên điện thoại sẽ không có camera, khi
+      // đó ẩn nút đi và để người dùng dùng nút chọn ảnh — trên mobile thuộc
+      // tính capture="environment" vẫn mở camera của hệ thống.
+      const canUseCamera =
+        window.isSecureContext && !!navigator.mediaDevices?.getUserMedia;
+      cameraBtn.hidden = !canUseCamera;
+
+      async function startCamera() {
+        stopCamera();
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: cameraFacing,
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        });
+        cameraVideo.srcObject = cameraStream;
+        await cameraVideo.play();
+
+        // Máy chỉ có 1 camera (đa số laptop) thì nút đổi camera vô nghĩa.
+        // Đếm sau khi đã có quyền, lúc đó enumerateDevices mới đáng tin.
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter(d => d.kind === 'videoinput');
+        cameraSwitch.hidden = videoInputs.length < 2;
+      }
+
+      function stopCamera() {
+        if (cameraStream) {
+          cameraStream.getTracks().forEach(track => track.stop());
+          cameraStream = null;
+        }
+        // Xoá vô điều kiện: nếu getUserMedia lỗi giữa đường thì srcObject vẫn
+        // có thể còn stream, để lại là đèn camera cứ sáng
+        cameraVideo.srcObject = null;
+      }
+
+      function closeCameraOverlay() {
+        stopCamera();
+        cameraOverlay.hidden = true;
+      }
+
+      cameraBtn.addEventListener('click', async () => {
+        cameraOverlay.hidden = false;
+        try {
+          await startCamera();
+        } catch (err) {
+          console.error('Không mở được camera:', err);
+          closeCameraOverlay();
+          scanStatus.className = 'scan-status warn';
+          scanStatus.textContent =
+            err.name === 'NotAllowedError'
+              ? '❌ Bạn đã từ chối quyền camera. Cấp lại quyền trong cài đặt trình duyệt, hoặc dùng nút chọn ảnh.'
+              : `❌ Không mở được camera (${err.name}). Dùng nút chọn ảnh giúp nhé.`;
+        }
+      });
+
+      cameraSwitch.addEventListener('click', async () => {
+        cameraFacing = cameraFacing === 'environment' ? 'user' : 'environment';
+        try {
+          await startCamera();
+        } catch (err) {
+          console.error('Không đổi được camera:', err);
+        }
+      });
+
+      cameraCancel.addEventListener('click', closeCameraOverlay);
+
+      cameraShutter.addEventListener('click', async () => {
+        const width = cameraVideo.videoWidth;
+        const height = cameraVideo.videoHeight;
+        if (!width || !height) return;
+
+        const scale = Math.min(1, MAX_IMAGE_DIM / Math.max(width, height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(width * scale);
+        canvas.height = Math.round(height * scale);
+        canvas
+          .getContext('2d')
+          .drawImage(cameraVideo, 0, 0, canvas.width, canvas.height);
+
+        closeCameraOverlay();
+        await scanAndFill(() => canvas.toDataURL('image/jpeg', 0.8).split(',')[1]);
+      });
+
+      // Rời tab mà vẫn sáng đèn camera thì rất khó chịu
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden && cameraStream) closeCameraOverlay();
       });
 
       let loaderTickTimer = null;
