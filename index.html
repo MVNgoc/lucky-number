@@ -802,12 +802,17 @@
         return missing;
       }
 
+      // Trạng thái thể hiện bằng màu nền của cả khối, không dùng icon trong câu
+      function setScanStatus(state, text) {
+        scanStatus.className = state ? `scan-status ${state}` : 'scan-status';
+        scanStatus.textContent = text;
+      }
+
       // Dùng chung cho 2 đường vào ảnh: chọn file và chụp bằng camera
       async function scanAndFill(getImageBase64) {
         scanBtn.disabled = true;
         cameraBtn.disabled = true;
-        scanStatus.className = 'scan-status working';
-        scanStatus.textContent = '⏳ Đang đọc ảnh vé...';
+        setScanStatus('working', 'Đang đọc ảnh vé...');
 
         try {
           const image = await getImageBase64();
@@ -817,26 +822,38 @@
             body: JSON.stringify({ image, mimeType: 'image/jpeg' })
           });
           const data = await response.json();
-          if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+          if (!response.ok) {
+            // Server đã có câu tiếng Việt sẵn -> hiện thẳng, đừng bọc thêm một
+            // lớp "Không đọc được ảnh vé (...)" nữa. 429 là "chậm lại" chứ
+            // không phải lỗi, nên để màu cảnh báo.
+            setScanStatus(
+              response.status === 429 ? 'warn' : 'error',
+              data.error || `Máy chủ trả HTTP ${response.status}.`
+            );
+            return;
+          }
 
           const missing = await applyReadTicket(data);
 
           if (missing.length === 0) {
-            scanStatus.className = 'scan-status ok';
-            scanStatus.textContent =
-              '✅ Đã điền xong. Đối chiếu lại với tờ vé rồi bấm DÒ VÉ.';
+            setScanStatus(
+              'ok',
+              'Đã điền xong. Đối chiếu lại với tờ vé rồi bấm DÒ VÉ.'
+            );
           } else if (missing.length === 3) {
-            scanStatus.className = 'scan-status warn';
-            scanStatus.textContent =
-              '⚠️ Không đọc được gì từ ảnh. Chụp lại rõ hơn, đủ sáng, không bị che.';
+            setScanStatus(
+              'warn',
+              'Không đọc được gì từ ảnh. Chụp lại rõ hơn, đủ sáng, không bị che.'
+            );
           } else {
-            scanStatus.className = 'scan-status warn';
-            scanStatus.textContent = `⚠️ Chưa đọc được: ${missing.join(', ')}. Phần đó nhập tay giúp nhé.`;
+            setScanStatus(
+              'warn',
+              `Chưa đọc được: ${missing.join(', ')}. Phần đó nhập tay giúp nhé.`
+            );
           }
         } catch (err) {
           console.error('Lỗi đọc vé:', err);
-          scanStatus.className = 'scan-status warn';
-          scanStatus.textContent = `❌ Không đọc được ảnh vé (${err.message}).`;
+          setScanStatus('error', `Không đọc được ảnh vé (${err.message}).`);
         } finally {
           scanBtn.disabled = false;
           cameraBtn.disabled = false;
@@ -947,11 +964,12 @@
         } catch (err) {
           console.error('Không mở được camera:', err);
           closeCameraOverlay();
-          scanStatus.className = 'scan-status warn';
-          scanStatus.textContent =
+          setScanStatus(
+            'error',
             err.name === 'NotAllowedError'
-              ? '❌ Bạn đã từ chối quyền camera. Cấp lại quyền trong cài đặt trình duyệt, hoặc dùng nút chọn ảnh.'
-              : `❌ Không mở được camera (${err.name}). Dùng nút chọn ảnh giúp nhé.`;
+              ? 'Bạn đã từ chối quyền camera. Cấp lại quyền trong cài đặt trình duyệt, hoặc dùng nút chọn ảnh.'
+              : `Không mở được camera (${err.name}). Dùng nút chọn ảnh giúp nhé.`
+          );
         }
       });
 

@@ -630,12 +630,15 @@ input:focus-visible,
   font-size: 0.85em;
   font-weight: bold;
   line-height: 1.5;
+  text-align: center;
 }
 
 .scan-status:empty {
   display: none;
 }
 
+/* Không dùng icon trong câu nữa: màu nền của khối là thứ báo trạng thái, nên
+   4 trạng thái phải phân biệt được bằng màu, kể cả lỗi và cảnh báo. */
 .scan-status.working {
   background: #cfe6ff;
 }
@@ -646,6 +649,11 @@ input:focus-visible,
 
 .scan-status.warn {
   background: #ffcc33;
+}
+
+.scan-status.error {
+  background: #d92b2b;
+  color: #fff;
 }
 
 /* Nhấp nháy ô vừa được AI điền để người dùng biết chỗ nào cần đối chiếu */
