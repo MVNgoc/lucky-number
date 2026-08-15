@@ -1,7 +1,4 @@
-// Rút gọn từ HTML thật của minhngoc.net.vn, giữ đúng cấu trúc mà parser dựa vào.
-// Khi minhngoc đổi layout, cập nhật fixture ở đây trước rồi sửa parser cho khớp.
 
-// Trang chủ: link đài nằm lẫn với link theo thứ và theo ngày ở cùng cấp
 const HOME_HTML = `
 <div class="menu">
   <a href="/ket-qua-xo-so/mien-nam/thu-hai.html">Thứ Hai</a>
@@ -20,8 +17,6 @@ const HOME_HTML = `
 </div>
 `;
 
-// Trang theo thứ của Miền Nam / Miền Trung: bảng nhiều tỉnh, mỗi tỉnh một td.tinh.
-// Trang thật liệt kê 7 kỳ gần nhất -> phải chỉ đọc box đầu tiên.
 const WEEKDAY_MULTI_PROVINCE_HTML = `
 <div class="box_kqxs">
   <div class="top"><div class="title">
@@ -47,8 +42,6 @@ const WEEKDAY_MULTI_PROVINCE_HTML = `
 </div>
 `;
 
-// Trang theo thứ của Miền Bắc: chỉ 1 đài, slug nằm ở link trong div.title.
-// Có cả một khối <tr> bị comment chứa .ngay -> parser không được nhặt vào.
 const WEEKDAY_SINGLE_PROVINCE_HTML = `
 <div class="box_kqxs">
   <div class="top"><div class="bkm"><div class="title">
@@ -63,7 +56,6 @@ const WEEKDAY_SINGLE_PROVINCE_HTML = `
 </div>
 `;
 
-// Trang lỗi / bị chặn: không có box_kqxs nào
 const EMPTY_HTML = '<html><body><h1>404 Not Found</h1></body></html>';
 
 module.exports = {

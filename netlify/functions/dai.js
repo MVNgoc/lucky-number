@@ -12,7 +12,6 @@ exports.handler = async event => {
     statusCode: 200,
     headers: {
       'Content-Type': 'application/json',
-      // Cache ở CDN để không phải scrape minhngoc mỗi lần cold start
       'Cache-Control': 'public, max-age=0, s-maxage=21600'
     },
     body: JSON.stringify(payload)

@@ -9,20 +9,13 @@
       content="Chụp ảnh vé số, máy tự đọc và dò kết quả xổ số ba miền"
     />
 
-    <!-- Icon serve từ chính project, không trỏ CDN: icon dùng cho màn hình chính
-         hay bị bỏ qua khi lấy cross-origin, và link ngoài có thể chết bất cứ lúc
-         nào. Ảnh gốc là hình đen trên nền trong suốt nên đã ghép nền trắng đặc —
-         iOS biến vùng trong suốt thành đen, để nguyên thì icon đen trên đen. -->
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
 
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#1a1a2e" />
-    <!-- iOS không đọc manifest, phải khai riêng để mở ở chế độ toàn màn hình -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <!-- black chứ không black-translucent: translucent cho nội dung tràn lên
-         thanh trạng thái, sẽ đè lên nút âm thanh đang fixed ở top 16px -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="Dò Vé" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -111,7 +104,6 @@
             type="file"
             id="ticket-photo"
             accept="image/*"
-            capture="environment"
             hidden
           />
           <button
@@ -261,8 +253,6 @@
       const dateInput = document.getElementById('date');
       const provinceSelect = document.getElementById('province');
       const ticketInput = document.getElementById('ticket-number');
-      // Chọn theo id, không theo .btn: nút CHỤP trong overlay camera cũng mang
-      // class .btn và nằm trước .container trong DOM nên querySelector bắt nhầm
       const submitBtn = document.getElementById('submit-btn');
       const statusMsg = document.getElementById('status-message');
       const scrapeWarning = document.getElementById('scrape-warning');
@@ -375,7 +365,6 @@
       let selectedDate = new Date(today);
       let viewYear = selectedDate.getFullYear();
       let viewMonth = selectedDate.getMonth();
-      // Ngày đang có tiêu điểm khi đi bằng bàn phím (khác ngày đã chọn)
       let focusedDate = null;
 
       function pad2(n) {
@@ -431,8 +420,6 @@
           if (isDisabled) {
             cell.setAttribute('aria-disabled', 'true');
           } else {
-            // Chỉ một ô nhận tab, còn lại điều hướng bằng mũi tên — cách chuẩn
-            // cho lưới ngày, khỏi phải Tab 31 lần
             cell.tabIndex = isSameDay(cellDate, focusedDate || selectedDate)
               ? 0
               : -1;
@@ -447,8 +434,6 @@
           datePickerGrid.appendChild(cell);
         }
 
-        // Không có ô nào chọn được trong tháng đang xem (tháng tương lai) thì
-        // cho ô đầu tiên còn dùng được nhận tab để bàn phím không bị kẹt
         const focusables = datePickerGrid.querySelectorAll('[tabindex="0"]');
         if (focusables.length === 0) {
           const firstUsable = datePickerGrid.querySelector(
@@ -463,13 +448,9 @@
         dateInput.value = formatDateDisplay(selectedDate);
         closeDatePicker();
         dateInput.focus();
-        // Mỗi đài chỉ quay 1-2 ngày/tuần -> đổi ngày là đổi danh sách đài
         loadProvinceList();
       }
 
-      // Di chuyển tiêu điểm trong lưới, tự sang tháng trước/sau khi vượt biên.
-      // Mốc là một Date tuyệt đối chứ không phải (số ngày + viewMonth): sau khi
-      // đổi tháng thì viewMonth đã khác, cộng dồn kiểu kia sẽ nhảy sai ngày.
       function moveDateFocus(deltaDays) {
         const base = focusedDate || selectedDate;
         const target = new Date(
@@ -524,7 +505,6 @@
         }
       });
 
-      // Mũi tên đi trong lưới ngày, Esc đóng và trả tiêu điểm về ô ngày
       dateField.addEventListener('keydown', event => {
         if (!isDatePickerOpen()) return;
 
@@ -577,16 +557,11 @@
         return `${pad2(d.getDate())}-${pad2(d.getMonth() + 1)}-${d.getFullYear()}`;
       }
 
-      // Trạng thái thể hiện bằng màu nền của khối, không dùng icon trong câu.
-      // Truyền state rỗng để xoá thông báo.
       function setStatusMsg(state, html = '') {
         statusMsg.className = `status-box${state ? ' ' + state : ''}`;
         statusMsg.innerHTML = html;
       }
 
-      // Danh sách đài lấy động từ /api/dai (server scrape minhngoc.net.vn) và
-      // đã được lọc theo thứ của ngày đang chọn. Value của mỗi option là
-      // "<mien>/<slug>" vì URL kết quả cần cả 2 phần.
       const LAST_PROVINCE_KEY = 'lastProvince';
       const provinceGroupsByWeekday = new Map();
       let provinceLoadToken = 0;
@@ -609,7 +584,6 @@
           );
           if (!response.ok) throw new Error(`API trả HTTP ${response.status}`);
           const { groups, status } = await response.json();
-          // Người dùng đã đổi ngày lần nữa trong lúc chờ -> bỏ kết quả cũ
           if (token !== provinceLoadToken) return;
 
           provinceGroupsByWeekday.set(weekday, groups);
@@ -620,7 +594,6 @@
           console.error('Không thể tải danh sách đài:', err);
           provinceSelect.innerHTML =
             '<option value="">Không tải được danh sách đài</option>';
-          // Hay gặp nhất: mở trang bằng Live Server / file:// nên không có /api
           setStatusMsg(
             'error',
             `Không tải được danh sách đài (${err.message}).<br>` +
@@ -631,9 +604,6 @@
         }
       }
 
-      // minhngoc đổi layout -> server rơi về danh sách cứng, app vẫn chạy nhưng
-      // dữ liệu có thể đã lệch. Nói thẳng ra thay vì để người dùng tin tưởng
-      // vào một danh sách cũ.
       function showScrapeWarning(status) {
         if (!status?.usingFallback) {
           scrapeWarning.hidden = true;
@@ -663,7 +633,6 @@
           provinceSelect.appendChild(optgroup);
         });
 
-        // Giữ nguyên đài đang chọn nếu ngày mới nó vẫn mở thưởng
         if (previous) provinceSelect.value = previous;
         if (!provinceSelect.value && provinceSelect.options.length > 0) {
           provinceSelect.selectedIndex = 0;
@@ -681,10 +650,6 @@
 
       const TICKET_NUMBER_REGEX = /^\d{5,6}$/;
 
-      // ----- Lọc HTML do AI sinh ra trước khi gán vào trang -----
-      // Prompt yêu cầu AI chỉ trả div kèm style inline, nhưng output của model
-      // không phải thứ mình kiểm soát được. Gán thẳng vào innerHTML là mở cửa
-      // cho <img onerror=...> nếu sau này prompt nhận thêm input tự do.
       const AI_ALLOWED_TAGS = new Set([
         'DIV', 'SPAN', 'P', 'B', 'STRONG', 'I', 'EM', 'U', 'SMALL', 'BIG',
         'BR', 'HR', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'UL', 'OL', 'LI',
@@ -698,7 +663,6 @@
         'rowspan',
         'align'
       ]);
-      // Xoá hẳn cả nội dung bên trong, không chỉ bóc thẻ
       const AI_DROP_TAGS = new Set([
         'SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'LINK', 'META',
         'BASE', 'FORM', 'INPUT', 'BUTTON', 'TEXTAREA', 'SELECT', 'SVG',
@@ -706,15 +670,12 @@
       ]);
 
       function isSafeStyleValue(value) {
-        // position:fixed/sticky để tránh khối AI phủ lên UI của trang
         return !/url\s*\(|expression\s*\(|javascript:|position\s*:\s*(fixed|sticky)/i.test(
           value
         );
       }
 
       function sanitizeAiHtml(html) {
-        // DOMParser tạo document không có browsing context: script không chạy,
-        // onerror của img không kích hoạt, nên bóc tách ở đây là an toàn.
         const doc = new DOMParser().parseFromString(html, 'text/html');
 
         function walk(parent) {
@@ -732,7 +693,6 @@
             }
 
             if (!AI_ALLOWED_TAGS.has(tag)) {
-              // Thẻ lạ nhưng không nguy hiểm: bóc thẻ, giữ nội dung
               walk(node);
               node.replaceWith(...Array.from(node.childNodes));
               return;
@@ -757,18 +717,13 @@
         return doc.body.innerHTML;
       }
 
-      // ----- Chụp vé, AI đọc rồi tự điền -----
       const photoInput = document.getElementById('ticket-photo');
       const scanBtn = document.getElementById('scan-btn');
       const scanStatus = document.getElementById('scan-status');
 
-      // Ảnh điện thoại 3-8MB, base64 lại phình thêm ~33%, vượt giới hạn body
-      // của serverless function. Thu về 1024px là quá đủ để đọc số in cỡ lớn.
       const MAX_IMAGE_DIM = 1024;
 
       async function shrinkImageToBase64(file) {
-        // imageOrientation: ảnh chụp dọc bằng điện thoại có cờ EXIF, không xử
-        // lý thì vé bị nằm ngang và AI đọc sai
         const bitmap = await createImageBitmap(file, {
           imageOrientation: 'from-image'
         });
@@ -794,8 +749,6 @@
         el.classList.add('filled-flash');
       }
 
-      // Điền những gì đọc được, trả về danh sách phần KHÔNG điền được để báo
-      // cho người dùng biết chỗ nào phải tự nhập
       async function applyReadTicket(data) {
         const missing = [];
 
@@ -814,7 +767,6 @@
           missing.push('ngày');
         }
 
-        // Danh sách đài phụ thuộc thứ của ngày -> phải load lại trước khi chọn
         await loadProvinceList();
 
         if (data.province) {
@@ -839,13 +791,11 @@
         return missing;
       }
 
-      // Trạng thái thể hiện bằng màu nền của cả khối, không dùng icon trong câu
       function setScanStatus(state, text) {
         scanStatus.className = `scan-status status-box${state ? ' ' + state : ''}`;
         scanStatus.textContent = text;
       }
 
-      // Dùng chung cho 2 đường vào ảnh: chọn file và chụp bằng camera
       async function scanAndFill(getImageBase64) {
         scanBtn.disabled = true;
         cameraBtn.disabled = true;
@@ -860,9 +810,6 @@
           });
           const data = await response.json();
           if (!response.ok) {
-            // Server đã có câu tiếng Việt sẵn -> hiện thẳng, đừng bọc thêm một
-            // lớp "Không đọc được ảnh vé (...)" nữa. 429 là "chậm lại" chứ
-            // không phải lỗi, nên để màu cảnh báo.
             setScanStatus(
               response.status === 429 ? 'warn' : 'error',
               data.error || `Máy chủ trả HTTP ${response.status}.`
@@ -903,11 +850,9 @@
         const file = photoInput.files[0];
         if (!file) return;
         await scanAndFill(() => shrinkImageToBase64(file));
-        // Reset để chọn lại cùng một file vẫn kích hoạt change
         photoInput.value = '';
       });
 
-      // ----- Camera trực tiếp -----
       const cameraOverlay = document.getElementById('camera-overlay');
       const cameraVideo = document.getElementById('camera-video');
       const cameraBtn = document.getElementById('camera-btn');
@@ -918,10 +863,6 @@
       let cameraStream = null;
       let cameraFacing = 'environment';
 
-      // getUserMedia chỉ chạy trong secure context (https hoặc localhost). Mở
-      // trang qua http://<IP-LAN>:3000 trên điện thoại sẽ không có camera, khi
-      // đó ẩn nút đi và để người dùng dùng nút chọn ảnh — trên mobile thuộc
-      // tính capture="environment" vẫn mở camera của hệ thống.
       const canUseCamera =
         window.isSecureContext && !!navigator.mediaDevices?.getUserMedia;
       cameraBtn.hidden = !canUseCamera;
@@ -939,8 +880,6 @@
         cameraVideo.srcObject = cameraStream;
         await cameraVideo.play();
 
-        // Máy chỉ có 1 camera (đa số laptop) thì nút đổi camera vô nghĩa.
-        // Đếm sau khi đã có quyền, lúc đó enumerateDevices mới đáng tin.
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoInputs = devices.filter(d => d.kind === 'videoinput');
         cameraSwitch.hidden = videoInputs.length < 2;
@@ -951,8 +890,6 @@
           cameraStream.getTracks().forEach(track => track.stop());
           cameraStream = null;
         }
-        // Xoá vô điều kiện: nếu getUserMedia lỗi giữa đường thì srcObject vẫn
-        // có thể còn stream, để lại là đèn camera cứ sáng
         cameraVideo.srcObject = null;
       }
 
@@ -961,13 +898,10 @@
       function closeCameraOverlay() {
         stopCamera();
         cameraOverlay.hidden = true;
-        // Trả tiêu điểm về đúng nút đã mở, không thì nó kẹt trong phần tử vừa
-        // bị ẩn và người dùng bàn phím mất dấu hoàn toàn
         (focusBeforeCamera || cameraBtn).focus();
         focusBeforeCamera = null;
       }
 
-      // Overlay là modal: Tab phải quay vòng trong nó, Esc thì đóng
       cameraOverlay.addEventListener('keydown', event => {
         if (event.key === 'Escape') {
           event.preventDefault();
@@ -1038,7 +972,6 @@
         await scanAndFill(() => canvas.toDataURL('image/jpeg', 0.8).split(',')[1]);
       });
 
-      // Rời tab mà vẫn sáng đèn camera thì rất khó chịu
       document.addEventListener('visibilitychange', () => {
         if (document.hidden && cameraStream) closeCameraOverlay();
       });
@@ -1056,10 +989,6 @@
         });
       }
 
-      // Tăng khối từ from đến to (không bao gồm to) từ từ; khi đầy đoạn này
-      // thì reset và tăng lại từ đầu, lặp liên tục cho tới khi có phản hồi
-      // thật từ server/AI (thay vì chạy hết rồi đứng im chờ như trước, khiến
-      // thanh loading trông như bị đứng khi request lâu hơn dự kiến).
       function animateLoaderBlocks(from, to, intervalMs) {
         clearInterval(loaderTickTimer);
         let i = from;
@@ -1075,9 +1004,6 @@
         }, intervalMs);
       }
 
-      // minhngoc trả về kỳ quay gần nhất của đài khi ngày yêu cầu không phải
-      // ngày đài đó mở thưởng (ví dụ xin Hà Nội 07/08 -> trả kết quả 06/08).
-      // Phải tự đối chiếu ngày, nếu không sẽ dò vé với số của kỳ khác.
       function extractResultDate(boxKqxs) {
         const text =
           boxKqxs.querySelector('.ngay')?.textContent ||
@@ -1112,7 +1038,6 @@
         resetLoaderBlocks();
 
         const halfBlocks = Math.floor(loaderBlocks.length / 2);
-        // Nửa đầu tăng dần trong lúc chờ KQXS, dừng lại nếu server chưa phản hồi kịp
         animateLoaderBlocks(0, halfBlocks, 300);
 
         try {
@@ -1123,7 +1048,6 @@
           const doc = new DOMParser().parseFromString(htmlText, 'text/html');
           const boxKqxs = doc.querySelector('.box_kqxs');
 
-          // KQXS đã có -> chốt nửa đầu ngay, không chờ animation chạy hết
           fillLoaderBlocksUpTo(halfBlocks);
 
           if (!boxKqxs) {
@@ -1137,8 +1061,6 @@
           if (resultDate && resultDate !== requestedDate) {
             resetLoaderBlocks();
             loaderBar.style.display = 'none';
-            // Dropdown đã lọc theo thứ, nên lệch ngày gần như luôn là do kỳ
-            // quay hôm nay chưa công bố kết quả (các đài quay từ chiều tối).
             const chuaCoKetQua = isSameDay(selectedDate, today);
             return setStatusMsg(
               chuaCoKetQua ? 'working' : 'warn',
@@ -1155,8 +1077,6 @@
             'Đã có kết quả!!!. Đang phân tích ý nghĩa dãy số của bạn cho dzui....'
           );
 
-          // Nửa sau tăng dần trong lúc chờ AI phân tích, chừa lại khối cuối
-          // để đánh dấu thời điểm AI thực sự trả lời xong
           animateLoaderBlocks(halfBlocks, loaderBlocks.length - 1, 400);
 
           const aiResponse = await fetch(`/api/phan-tich-ai`, {
@@ -1170,13 +1090,10 @@
           });
           const aiData = await aiResponse.json();
 
-          // AI đã trả lời -> hoàn tất toàn bộ thanh loading ngay lập tức
           fillLoaderBlocksUpTo(loaderBlocks.length);
           clearInterval(loaderTickTimer);
           loaderBar.style.display = 'none';
 
-          // Kết quả dò vé ở trên vẫn đúng và vẫn hiển thị; AI lỗi thì chỉ mất
-          // phần phân tích cho vui, không được xoá kết quả đã dò
           if (!aiResponse.ok) {
             if (aiResponse.status === 429) {
               setStatusMsg(
@@ -1250,9 +1167,6 @@
           }
         });
 
-        // Giải khuyến khích riêng của đại lý: trùng 4/3/2 số cuối Giải Đặc Biệt.
-        // Đây là lệ của đại lý vé số miền Nam. Miền Bắc có cơ cấu 27 giải khác
-        // hẳn nên chưa áp dụng, tránh báo trúng sai.
         const isMienNam = typeof province === 'string' && province.startsWith('mien-nam/');
 
         if (isMienNam && !dbFullMatch && dbNumber) {

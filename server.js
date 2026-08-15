@@ -18,14 +18,11 @@ const {
 } = require('./lib/rateLimit');
 
 const app = express();
-// Cần thiết để req.ip lấy đúng IP client khi chạy sau proxy
 app.set('trust proxy', true);
 app.use(cors());
-// Ảnh vé gửi lên dạng base64 nên vượt xa mức 100kb mặc định của express.json
 app.use(express.json({ limit: '8mb' }));
 app.use(express.static(__dirname));
 
-// Để kiểm tra parser còn khớp với minhngoc hay đã phải chạy bằng dữ liệu cứng
 app.get('/api/health', (req, res) => {
   const status = getScrapeStatus();
   res.status(status.usingFallback ? 503 : 200).json(status);

@@ -369,7 +369,6 @@ input:focus-visible,
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  /* visibility hoãn tới khi fade xong để vẫn thấy hiệu ứng lúc đóng */
   transition:
     opacity 0.18s ease-out,
     transform 0.18s ease-out,
@@ -380,8 +379,6 @@ input:focus-visible,
   visibility: visible;
   pointer-events: auto;
   transform: scale(0.8) translateY(0);
-  /* Lúc mở phải visible ngay, không thì focus() vào ô ngày thất bại vì
-     phần tử vẫn đang visibility:hidden trong suốt thời gian transition */
   transition:
     opacity 0.18s ease-out,
     transform 0.18s ease-out,
@@ -438,7 +435,6 @@ input:focus-visible,
   font-weight: bold;
   background: #fff;
 }
-/* Điều hướng lưới ngày bằng mũi tên cần thấy rõ đang ở ô nào */
 .date-picker-grid > div:focus-visible {
   outline: 3px solid #000;
   outline-offset: -3px;
@@ -495,7 +491,6 @@ input:focus-visible,
   transform: translate(4px, 4px);
   box-shadow: 0px 0px 0px #000;
 }
-/* Chụp vé -> AI đọc -> tự điền form */
 .btn-scan {
   background: #fff;
   color: #000;
@@ -534,9 +529,6 @@ input:focus-visible,
   margin-top: 8px;
 }
 
-/* Khối thông báo dùng chung cho mọi vùng trạng thái. Panel chứa là kính mờ có
-   đèn nền chạy qua nên độ sáng đổi liên tục — phải có nền đặc mới đọc được.
-   Trạng thái báo bằng màu nền, không dùng icon trong câu chữ. */
 .status-box {
   padding: 10px 12px;
   border: 3px solid #000;
@@ -577,7 +569,6 @@ input:focus-visible,
   margin-bottom: 14px;
 }
 
-/* Overlay camera trực tiếp */
 .camera-overlay {
   position: fixed;
   inset: 0;
@@ -591,7 +582,6 @@ input:focus-visible,
   padding: 16px;
 }
 
-/* display:flex ở trên sẽ thắng display:none mặc định của [hidden] */
 .camera-overlay[hidden] {
   display: none;
 }
@@ -613,7 +603,6 @@ input:focus-visible,
   display: block;
 }
 
-/* Khung gợi ý căn tờ vé cho ngay ngắn */
 .camera-guide {
   position: absolute;
   inset: 12% 6%;
@@ -648,16 +637,12 @@ input:focus-visible,
   flex: 0 1 150px;
 }
 
-/* Panel chứa là kính mờ, phía sau lại có đèn nền chạy qua nên độ sáng đổi
-   liên tục. Chỉ đổi màu chữ thì kiểu gì cũng có lúc chìm vào nền, nên cho
-   hẳn nền đặc + viền đen như các ô khác để luôn đọc được. */
 .scan-status {
   margin-top: 10px;
   text-align: center;
 }
 
 
-/* Nhấp nháy ô vừa được AI điền để người dùng biết chỗ nào cần đối chiếu */
 .filled-flash {
   animation: filled-flash 0.9s steps(1) 2;
 }
@@ -673,10 +658,7 @@ input:focus-visible,
   }
 }
 
-/* Không đặt color ở đây: selector id thắng .status-box.error nên chữ sẽ bị ép
-   thành đen trên nền đỏ */
 #status-message {
-  /* Cùng bề rộng với .ticket-form để khối thông báo thẳng hàng với các ô nhập */
   max-width: 520px;
   margin: 40px auto 0;
   text-align: center;
@@ -690,7 +672,6 @@ input:focus-visible,
   border: 1px solid #dee2e6;
 }
 
-/* Animation Neon */
 .neon-text {
   text-align: center;
   font-size: 2.2em !important;
@@ -737,7 +718,6 @@ input:focus-visible,
   }
 }
 
-/* Container thanh Loading */
 .loader-bar {
   width: auto;
   display: grid;
@@ -838,8 +818,6 @@ input:focus-visible,
   align-items: center;
 }
 
-/* JS thêm class "filled" cho từng khối theo tiến trình gọi API thực tế
-   (không dùng animation-delay cố định vì thời gian phản hồi của AI thay đổi) */
 @keyframes block-pop {
   from {
     opacity: 0;
@@ -990,7 +968,6 @@ input:focus-visible,
   max-width: 100px;
 }
 
-/* Tablet */
 @media (max-width: 768px) {
   .container {
     max-width: 92vw;
@@ -1035,7 +1012,6 @@ input:focus-visible,
   }
 }
 
-/* Mobile */
 @media (max-width: 480px) {
   body {
     font-size: 14px;
@@ -1123,7 +1099,6 @@ input:focus-visible,
   }
 }
 
-/* Extra-small phones */
 @media (max-width: 360px) {
   .container {
     padding: 8px;
